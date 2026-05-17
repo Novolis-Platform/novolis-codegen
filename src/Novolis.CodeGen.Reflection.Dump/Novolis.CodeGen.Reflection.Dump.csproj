@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>Novolis.CodeGen.Reflection.Dump</PackageId>
+    <Version>0.1.0-preview.1</Version>
+    <Description>Dump objects as C# initialization code for tests and debugging.</Description>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Novolis.CodeGen.Reflection\Novolis.CodeGen.Reflection.csproj" />
+    <PackageReference Include="Humanizer.Core" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="VarDump" />
+  </ItemGroup>
+</Project>

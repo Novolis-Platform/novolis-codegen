@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>Novolis.CodeGen.Reflection</PackageId>
+    <Version>0.1.0-preview.1</Version>
+    <Description>Type and reflection display helpers (friendly names, display names).</Description>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+</Project>

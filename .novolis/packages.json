@@ -1,14 +1,39 @@
 {
   "packages": {
-    "Novolis.CodeGen": {
+    "Novolis.CodeGen.Reflection": {
+      "project": "src/Novolis.CodeGen.Reflection/Novolis.CodeGen.Reflection.csproj",
       "paths": [
-        "src/Novolis.CodeGen/**",
-        "tests/**",
+        "src/Novolis.CodeGen.Reflection/**",
+        "tests/Novolis.CodeGen.Reflection.Tests/**",
         "Directory.Build.props",
         "Directory.Packages.props",
-        "global.json"
-      ],
-      "project": "src/Novolis.CodeGen/Novolis.CodeGen.csproj"
+        "global.json",
+        "Novolis.CodeGen.slnx"
+      ]
+    },
+    "Novolis.CodeGen.Reflection.Dump": {
+      "project": "src/Novolis.CodeGen.Reflection.Dump/Novolis.CodeGen.Reflection.Dump.csproj",
+      "paths": [
+        "src/Novolis.CodeGen.Reflection.Dump/**",
+        "src/Novolis.CodeGen.Reflection/**",
+        "tests/Novolis.CodeGen.Reflection.Dump.Tests/**",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json",
+        "Novolis.CodeGen.slnx"
+      ]
+    },
+    "Novolis.CodeGen.Reflection.Mermaid": {
+      "project": "src/Novolis.CodeGen.Reflection.Mermaid/Novolis.CodeGen.Reflection.Mermaid.csproj",
+      "paths": [
+        "src/Novolis.CodeGen.Reflection.Mermaid/**",
+        "src/Novolis.CodeGen.Reflection/**",
+        "tests/Novolis.CodeGen.Reflection.Mermaid.Tests/**",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json",
+        "Novolis.CodeGen.slnx"
+      ]
     }
   }
 }

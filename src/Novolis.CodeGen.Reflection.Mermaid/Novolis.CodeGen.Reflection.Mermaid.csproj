@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>Novolis.CodeGen.Reflection.Mermaid</PackageId>
+    <Version>0.1.0-preview.1</Version>
+    <Description>Build Mermaid classDiagram text from assembly reflection.</Description>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Novolis.CodeGen.Reflection\Novolis.CodeGen.Reflection.csproj" />
+  </ItemGroup>
+</Project>
