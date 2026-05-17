@@ -44,7 +44,7 @@ public class TypeExtensionsTests
     public async Task GetFriendlyName_ReturnsCorrectFriendlyNameForGenericType()
     {
         var friendlyName = typeof(Dictionary<string, object>).GetFriendlyName();
-        await Assert.That(friendlyName).IsEqualTo("Dictionary<string, object>");
+        await Assert.That(friendlyName).IsEqualTo("Dictionary<String, Object>");
     }
 
     [Test]
@@ -58,6 +58,6 @@ public class TypeExtensionsTests
     public async Task GetFullFriendlyName_ReturnsCorrectFullFriendlyNameForGenericType()
     {
         var fullFriendlyName = typeof(Dictionary<string, object>).GetFullFriendlyName();
-        await Assert.That(fullFriendlyName).IsEqualTo("System.Collections.Generic.Dictionary<string, object>");
+        await Assert.That(fullFriendlyName).IsEqualTo("System.Collections.Generic.Dictionary<String, Object>");
     }
 }
