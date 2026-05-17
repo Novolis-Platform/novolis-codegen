@@ -1,13 +1,13 @@
-using FluentAssertions;
 using Novolis.CodeGen.Reflection.Dump;
 using Novolis.CodeGen.Reflection.Dump.Tests.TestingInfrastructure;
+using TUnit.Core;
 
 namespace Novolis.CodeGen.Reflection.Dump.Tests;
 
 public class DumpExtensionsTests
 {
     [Test]
-    public void Dump()
+    public async Task Dump()
     {
         var data = new Person
         {
@@ -18,11 +18,11 @@ public class DumpExtensionsTests
 
         var dump = data.DumpClass();
         TestContext.Current?.OutputWriter.WriteLine(dump);
-        dump.Should().NotBeNullOrWhiteSpace();
+        await Assert.That(dump).IsNotNullOrWhiteSpace();
     }
 
     [Test]
-    public void DumpVar()
+    public async Task DumpVar()
     {
         var data = new Person
         {
@@ -33,11 +33,11 @@ public class DumpExtensionsTests
 
         var dump = data.DumpVar();
         TestContext.Current?.OutputWriter.WriteLine(dump);
-        dump.Should().NotBeNullOrWhiteSpace();
+        await Assert.That(dump).IsNotNullOrWhiteSpace();
     }
 
     [Test]
-    public void DumpEnumerable()
+    public async Task DumpEnumerable()
     {
         var people = new List<Person>
         {
@@ -49,12 +49,12 @@ public class DumpExtensionsTests
         var result = people.DumpEnumerable(p => p.Name);
         TestContext.Current?.OutputWriter.WriteLine(result);
 
-        result.Should().Contain("public class People : IEnumerable<Person>");
-        result.Should().Contain("yield return GetFrank();");
-        result.Should().Contain("yield return GetAlice();");
-        result.Should().Contain("yield return GetBob();");
-        result.Should().Contain("public static Person GetFrank()");
-        result.Should().Contain("public static Person GetAlice()");
-        result.Should().Contain("public static Person GetBob()");
+        await Assert.That(result).Contains("public class People : IEnumerable<Person>");
+        await Assert.That(result).Contains("yield return GetFrank();");
+        await Assert.That(result).Contains("yield return GetAlice();");
+        await Assert.That(result).Contains("yield return GetBob();");
+        await Assert.That(result).Contains("public static Person GetFrank()");
+        await Assert.That(result).Contains("public static Person GetAlice()");
+        await Assert.That(result).Contains("public static Person GetBob()");
     }
 }

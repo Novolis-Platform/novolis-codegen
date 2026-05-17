@@ -5,7 +5,6 @@
     <RootNamespace>Novolis.CodeGen.Reflection.ClassDiagram.Tests</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="FluentAssertions" />
     <PackageReference Include="TUnit" />
     <ProjectReference Include="..\..\src\Novolis.CodeGen.Reflection.ClassDiagram\Novolis.CodeGen.Reflection.ClassDiagram.csproj" />
   </ItemGroup>
