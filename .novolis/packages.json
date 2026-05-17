@@ -23,12 +23,12 @@
         "Novolis.CodeGen.slnx"
       ]
     },
-    "Novolis.CodeGen.Reflection.Mermaid": {
-      "project": "src/Novolis.CodeGen.Reflection.Mermaid/Novolis.CodeGen.Reflection.Mermaid.csproj",
+    "Novolis.CodeGen.Reflection.ClassDiagram": {
+      "project": "src/Novolis.CodeGen.Reflection.ClassDiagram/Novolis.CodeGen.Reflection.ClassDiagram.csproj",
       "paths": [
-        "src/Novolis.CodeGen.Reflection.Mermaid/**",
+        "src/Novolis.CodeGen.Reflection.ClassDiagram/**",
         "src/Novolis.CodeGen.Reflection/**",
-        "tests/Novolis.CodeGen.Reflection.Mermaid.Tests/**",
+        "tests/Novolis.CodeGen.Reflection.ClassDiagram.Tests/**",
         "Directory.Build.props",
         "Directory.Packages.props",
         "global.json",

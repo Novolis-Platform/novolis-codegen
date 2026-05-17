@@ -1,0 +1,7 @@
+namespace Novolis.CodeGen.Reflection.Mermaid;
+
+[Obsolete("Use Novolis.CodeGen.Reflection.ClassDiagram. This namespace will be removed in a future release.")]
+public interface IDiagramBuilder : ClassDiagram.IDiagramBuilder;
+
+[Obsolete("Use Novolis.CodeGen.Reflection.ClassDiagram. This namespace will be removed in a future release.")]
+public interface IClassDiagramBuilder : ClassDiagram.IClassDiagramBuilder;

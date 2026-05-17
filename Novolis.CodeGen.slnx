@@ -2,11 +2,11 @@
   <Folder Name="/src/">
     <Project Path="src/Novolis.CodeGen.Reflection/Novolis.CodeGen.Reflection.csproj" />
     <Project Path="src/Novolis.CodeGen.Reflection.Dump/Novolis.CodeGen.Reflection.Dump.csproj" />
-    <Project Path="src/Novolis.CodeGen.Reflection.Mermaid/Novolis.CodeGen.Reflection.Mermaid.csproj" />
+    <Project Path="src/Novolis.CodeGen.Reflection.ClassDiagram/Novolis.CodeGen.Reflection.ClassDiagram.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Novolis.CodeGen.Reflection.Tests/Novolis.CodeGen.Reflection.Tests.csproj" />
     <Project Path="tests/Novolis.CodeGen.Reflection.Dump.Tests/Novolis.CodeGen.Reflection.Dump.Tests.csproj" />
-    <Project Path="tests/Novolis.CodeGen.Reflection.Mermaid.Tests/Novolis.CodeGen.Reflection.Mermaid.Tests.csproj" />
+    <Project Path="tests/Novolis.CodeGen.Reflection.ClassDiagram.Tests/Novolis.CodeGen.Reflection.ClassDiagram.Tests.csproj" />
   </Folder>
 </Solution>

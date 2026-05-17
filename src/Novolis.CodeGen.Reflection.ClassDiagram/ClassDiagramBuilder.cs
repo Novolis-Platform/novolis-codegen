@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Text;
 
-namespace Novolis.CodeGen.Reflection.Mermaid;
+namespace Novolis.CodeGen.Reflection.ClassDiagram;
 
 public class ClassDiagramBuilder : IClassDiagramBuilder
 {

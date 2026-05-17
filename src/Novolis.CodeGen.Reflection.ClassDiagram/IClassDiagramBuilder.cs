@@ -1,4 +1,4 @@
-namespace Novolis.CodeGen.Reflection.Mermaid;
+namespace Novolis.CodeGen.Reflection.ClassDiagram;
 
 public interface IClassDiagramBuilder : IDiagramBuilder
 {

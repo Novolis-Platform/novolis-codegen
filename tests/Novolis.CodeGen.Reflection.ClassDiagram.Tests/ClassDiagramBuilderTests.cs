@@ -1,7 +1,7 @@
 using FluentAssertions;
-using Novolis.CodeGen.Reflection.Mermaid;
+using Novolis.CodeGen.Reflection.ClassDiagram;
 
-namespace Novolis.CodeGen.Reflection.Mermaid.Tests;
+namespace Novolis.CodeGen.Reflection.ClassDiagram.Tests;
 
 public class ClassDiagramBuilderTests
 {
