@@ -1,7 +1,16 @@
 namespace Novolis.CodeGen.Pipeline;
 
+/// <summary>Determines whether a pipeline step can be skipped based on prior results and fingerprints.</summary>
 public static class StepSkipEvaluator
 {
+    /// <summary>
+    /// Returns whether <paramref name="step"/> can be skipped because inputs and outputs are unchanged since the last successful run.
+    /// </summary>
+    /// <param name="step">Pipeline step.</param>
+    /// <param name="context">Pipeline context.</param>
+    /// <param name="previous">Previous <c>result.json</c>, if any.</param>
+    /// <param name="reason">Skip reason when returning <see langword="true"/>.</param>
+    /// <returns><see langword="true"/> when the step should be skipped.</returns>
     public static bool ShouldSkip(
         IPipelineStep step,
         PipelineContext context,

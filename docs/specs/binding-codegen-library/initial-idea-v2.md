@@ -10,7 +10,8 @@
 | Parity gate | **T1** AST-normalized equivalence |
 | Milestone | Through **Phase 4** (library + raylib wired) |
 | Binding model | **L0–L3 stack** with `CompanionDeclaration` |
-| Façade authority v1 | **JSON** (C# deferred to Phase 5+) |
+| Manifest authority | **C# fragments** defined by the consumer (`Novolis.Raylib.Manifests`) |
+| IO | **IFileSystem** via `CodegenEnvironment` (tests use `MockFileSystem`) |
 | Inlining | Emitter owns inlining; hooks for XML docs + EndDrawing |
 
 ## L0–L3 binding stack
@@ -29,17 +30,21 @@ Merge points must include **L2 companion declarations** for validation; façades
 | Package | Contents |
 |---------|----------|
 | `Novolis.CodeGen.Pipeline` | `IPipelineStep`, `PipelineRunner`, skip/cache, `result.json` |
-| `Novolis.CodeGen.Bindings` | Fragments, serializers, `IBindingEmitter`, `BindingCodegenExecutor` |
+| `Novolis.CodeGen.Bindings` | Fragments, `IBindingManifestSource`, `IBindingEmitter`, `BindingCodegenExecutor`, `CodegenEnvironment` |
 | `Novolis.CodeGen.Bindings.Roslyn` | `ICodegenHook`, `RoslynEmitWriter`, `CompilationUnitComparer` |
 
-## Wire formats (split serializers)
+## Consumer manifests (C#)
 
-| File pattern | Root key | Serializer |
-|--------------|----------|------------|
-| `*-exports.manifest.json` (interop) | `imports` | `InteropExportsSerializer` |
-| `imgui/raygui-exports` | `functions` | `ShimExportsSerializer` |
-| `raylib-debug.manifest.json` | symbols map | `DebugConfigSerializer` |
-| façade manifests | `types` | `FacadeTypesSerializer` |
+Raylib defines fragments in `codegen/Novolis.Raylib.Manifests/*.cs` and exposes them via `RaylibBindingManifestSource.Instance`.
+
+| Fragment kind | Raylib id | Generated output |
+|---------------|-----------|------------------|
+| `InteropExports` | `raylib6` | `Raylib6Native.g.cs` |
+| `ShimExports` | `imgui`, `raygui` | `ImguiShimExports.g.cs`, `RayguiShimExports.g.cs` |
+| `DebugConfig` | `raylib-debug` | `RaylibDebugFrameHooks.g.cs` |
+| `FacadeTypes` | `facades`, `hud`, `gui`, `raygui` | Runtime / Raygui façades |
+
+Manifest fingerprints use `ManifestFingerprint.Sha256Hex(fragment)` — not JSON serialization.
 
 ## API surface
 
@@ -48,12 +53,13 @@ Merge points must include **L2 companion declarations** for validation; façades
 - `IBindingCodegenHost` — consumer entry (`RaylibBindingCodegenHost`)
 - `BindingEmitContext` — **only** config channel for hooks (no disk reads)
 - `CompanionDeclaration` — required hand-written files per stack
+- `CodegenEnvironment` — `IFileSystem` + repo root for all codegen IO
 
 ## Parity
 
 | Tier | Check |
 |------|-------|
-| T0 | `ManifestSha256` header line |
+| T0 | `ManifestSha256` header line (fragment fingerprint) |
 | T1 | **Gate:** `CompilationUnitComparer` structural match |
 | T2 | Byte-identical (not required) |
 
@@ -71,6 +77,5 @@ Regenerate hint: `dotnet run --project codegen/Novolis.Raylib.Pipeline -- run ge
 
 ## Deferred
 
-- **Phase 5:** C# manifests (interop/shim/debug); derived JSON
-- **Phase 6:** Façade C# + enrich/resolver relocation
+- **Phase 6:** Automated façade doc enrichment back into C# manifest sources
 - **Backlog:** NativePack generator, BindingSurface sugar, second consumer

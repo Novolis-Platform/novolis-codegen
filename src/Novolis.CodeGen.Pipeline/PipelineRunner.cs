@@ -2,17 +2,27 @@ using System.Diagnostics;
 
 namespace Novolis.CodeGen.Pipeline;
 
+/// <summary>Runs pipeline steps sequentially with logging, skip detection, and result persistence.</summary>
 public sealed class PipelineRunner
 {
     private readonly IReadOnlyList<IPipelineStep> _steps;
     private readonly IPipelineLayout _layout;
 
+    /// <summary>Creates a runner for the given steps and repository layout.</summary>
+    /// <param name="steps">Ordered step implementations.</param>
+    /// <param name="layout">Repository layout.</param>
     public PipelineRunner(IEnumerable<IPipelineStep> steps, IPipelineLayout layout)
     {
         _steps = steps.ToList();
         _layout = layout;
     }
 
+    /// <summary>Runs the steps identified by <paramref name="stepIds"/> in order.</summary>
+    /// <param name="stepIds">Step identifiers to run.</param>
+    /// <param name="force">When <see langword="true"/>, disables skip detection.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Process exit code (0 on success).</returns>
+    /// <exception cref="InvalidOperationException">When a step id is unknown.</exception>
     public async Task<int> RunProfileAsync(
         IReadOnlyList<string> stepIds,
         bool force,
@@ -29,6 +39,12 @@ public sealed class PipelineRunner
         return await RunStepsAsync(selected, force, cancellationToken);
     }
 
+    /// <summary>Runs a single step by identifier.</summary>
+    /// <param name="stepId">Step identifier.</param>
+    /// <param name="force">When <see langword="true"/>, disables skip detection.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Process exit code (0 on success).</returns>
+    /// <exception cref="InvalidOperationException">When the step id is unknown.</exception>
     public async Task<int> RunStepAsync(string stepId, bool force, CancellationToken cancellationToken = default)
     {
         var step = _steps.FirstOrDefault(s => string.Equals(s.Id, stepId, StringComparison.Ordinal))

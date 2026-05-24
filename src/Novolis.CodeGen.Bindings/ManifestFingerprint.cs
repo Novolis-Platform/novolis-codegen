@@ -3,11 +3,19 @@ using System.Text;
 
 namespace Novolis.CodeGen.Bindings;
 
+/// <summary>Computes stable SHA-256 fingerprints for manifest fragments.</summary>
 public static class ManifestFingerprint
 {
+    /// <summary>Returns a lowercase hex SHA-256 of the canonical manifest text for <paramref name="fragment"/>.</summary>
+    /// <param name="fragment">Manifest fragment to fingerprint.</param>
+    /// <returns>64-character lowercase hex digest.</returns>
     public static string Sha256Hex(IManifestFragment fragment) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(CanonicalText(fragment)))).ToLowerInvariant();
 
+    /// <summary>Builds deterministic text used for manifest hashing and drift detection.</summary>
+    /// <param name="fragment">Manifest fragment to canonicalize.</param>
+    /// <returns>Canonical string representation.</returns>
+    /// <exception cref="NotSupportedException">When <paramref name="fragment"/> is not a supported fragment type.</exception>
     public static string CanonicalText(IManifestFragment fragment) =>
         fragment switch
         {

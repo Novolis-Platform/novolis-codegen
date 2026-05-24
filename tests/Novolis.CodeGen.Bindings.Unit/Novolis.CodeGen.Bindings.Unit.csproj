@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="TUnit" />
+    <PackageReference Include="System.IO.Abstractions.TestingHelpers" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Novolis.CodeGen.Bindings/Novolis.CodeGen.Bindings.csproj" />
