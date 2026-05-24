@@ -1,3 +1,22 @@
+<!-- novolis-package-index:start -->
+> **GitHub Packages shows this repository README on every package page** (upstream limitation).
+> Open the **package README** for install and quick start — embedded in each .nupkg and linked below.
+
+## Published packages
+
+| Package | Install | Package README |
+|---------|---------|----------------|
+| `Novolis.CodeGen.Bindings` | `dotnet add package Novolis.CodeGen.Bindings` | [README](https://github.com/Novolis-Platform/novolis-codegen/blob/main/src/Novolis.CodeGen.Bindings/README.md) |
+| `Novolis.CodeGen.Bindings.Roslyn` | `dotnet add package Novolis.CodeGen.Bindings.Roslyn` | [README](https://github.com/Novolis-Platform/novolis-codegen/blob/main/src/Novolis.CodeGen.Bindings.Roslyn/README.md) |
+| `Novolis.CodeGen.Pipeline` | `dotnet add package Novolis.CodeGen.Pipeline` | [README](https://github.com/Novolis-Platform/novolis-codegen/blob/main/src/Novolis.CodeGen.Pipeline/README.md) |
+| `Novolis.CodeGen.Reflection` | `dotnet add package Novolis.CodeGen.Reflection` | [README](https://github.com/Novolis-Platform/novolis-codegen/blob/main/src/Novolis.CodeGen.Reflection/README.md) |
+| `Novolis.CodeGen.Reflection.ClassDiagram` | `dotnet add package Novolis.CodeGen.Reflection.ClassDiagram` | [README](https://github.com/Novolis-Platform/novolis-codegen/blob/main/src/Novolis.CodeGen.Reflection.ClassDiagram/README.md) |
+| `Novolis.CodeGen.Reflection.Dump` | `dotnet add package Novolis.CodeGen.Reflection.Dump` | [README](https://github.com/Novolis-Platform/novolis-codegen/blob/main/src/Novolis.CodeGen.Reflection.Dump/README.md) |
+
+For NuGet.org and Visual Studio, the **embedded** README.md inside each package is authoritative.
+
+<!-- novolis-package-index:end -->
+
 # CodeGen
 
 Reusable binding codegen library for Novolis: manifest fragments, Roslyn emit hooks, and maintainer pipelines.
@@ -43,3 +62,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Follow [documentation-policy.md](../novo
 ## Security
 
 See [SECURITY.md](SECURITY.md).
+
