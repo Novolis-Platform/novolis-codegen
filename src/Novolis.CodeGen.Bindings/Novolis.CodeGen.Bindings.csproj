@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>Novolis.CodeGen.Bindings</PackageId>
+    <Description>Manifest fragments, merge plans, and binding codegen orchestration.</Description>
+    <IsPackable>true</IsPackable>
+    <RootNamespace>Novolis.CodeGen.Bindings</RootNamespace>
+  </PropertyGroup>
+</Project>

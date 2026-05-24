@@ -267,7 +267,8 @@ flowchart LR
 | File | Role |
 |------|------|
 | [initial-idea.md](./initial-idea.md) | Original design (read-only baseline) |
+| [initial-idea-v2.md](./initial-idea-v2.md) | **Implementation spec** (L0–L3, APIs, parity) |
 | **summary.md** (this file) | Visual overview + priorities |
 | [analysis.md](./analysis.md) | Full evidence, code references, plug details |
 
-When a plug is accepted, record it in a future `initial-idea-v2.md` — not by editing the baseline spec until sign-off.
+When a plug is accepted, record it in **initial-idea-v2.md** — not by editing the baseline spec until sign-off.

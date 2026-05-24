@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>Novolis.CodeGen.Bindings.Roslyn</PackageId>
+    <Description>Roslyn hook host, emit writer, and compilation unit comparison for binding codegen.</Description>
+    <IsPackable>true</IsPackable>
+    <RootNamespace>Novolis.CodeGen.Bindings.Roslyn</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+    <ProjectReference Include="..\Novolis.CodeGen.Bindings\Novolis.CodeGen.Bindings.csproj" />
+  </ItemGroup>
+</Project>

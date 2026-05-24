@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>Novolis.CodeGen.Pipeline</PackageId>
+    <Description>Linear step pipeline kernel with fingerprinted skip/cache and result.json.</Description>
+    <IsPackable>true</IsPackable>
+    <RootNamespace>Novolis.CodeGen.Pipeline</RootNamespace>
+  </PropertyGroup>
+</Project>

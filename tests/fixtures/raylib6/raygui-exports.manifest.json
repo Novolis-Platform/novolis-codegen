@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "header": "codegen/vendor/raygui-6/raygui.h",
+  "description": "Curated RAYGUIAPI exports bound via novolis_raygui shim (function pointers). Template ids map to emit logic in generate-raygui-interop.cs.",
+  "functions": [
+    { "export": "GuiEnable", "template": "void_void" },
+    { "export": "GuiDisable", "template": "void_void" },
+    { "export": "GuiLock", "template": "void_void" },
+    { "export": "GuiUnlock", "template": "void_void" },
+    { "export": "GuiSetAlpha", "template": "void_float" },
+    { "export": "GuiSetState", "template": "void_int" },
+    { "export": "GuiGetState", "template": "int_void" },
+    { "export": "GuiSetStyle", "template": "void_int_int_int" },
+    { "export": "GuiGetStyle", "template": "int_int_int" },
+    { "export": "GuiLoadStyleDefault", "template": "void_void" },
+    { "export": "GuiPanel", "template": "int_rect_utf8" },
+    { "export": "GuiGroupBox", "template": "int_rect_utf8" },
+    { "export": "GuiLine", "template": "int_rect_utf8" },
+    { "export": "GuiLabel", "template": "int_rect_utf8" },
+    { "export": "GuiStatusBar", "template": "int_rect_utf8" },
+    { "export": "GuiDummyRec", "template": "int_rect_utf8" },
+    { "export": "GuiButton", "template": "int_rect_utf8" },
+    { "export": "GuiLabelButton", "template": "int_rect_utf8" },
+    { "export": "GuiToggle", "template": "int_rect_utf8_ptrbyte" },
+    { "export": "GuiCheckBox", "template": "int_rect_utf8_ptrbyte" },
+    { "export": "GuiComboBox", "template": "int_rect_utf8_ptrint" },
+    { "export": "GuiSlider", "template": "int_rect_utf8_utf8_ptrfloat_float_float" },
+    { "export": "GuiSliderBar", "template": "int_rect_utf8_utf8_ptrfloat_float_float" },
+    { "export": "GuiProgressBar", "template": "int_rect_utf8_utf8_ptrfloat_float_float" }
+  ]
+}

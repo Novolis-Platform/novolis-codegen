@@ -3,8 +3,12 @@
     <Project Path="src/Novolis.CodeGen.Reflection/Novolis.CodeGen.Reflection.csproj" />
     <Project Path="src/Novolis.CodeGen.Reflection.Dump/Novolis.CodeGen.Reflection.Dump.csproj" />
     <Project Path="src/Novolis.CodeGen.Reflection.ClassDiagram/Novolis.CodeGen.Reflection.ClassDiagram.csproj" />
+    <Project Path="src/Novolis.CodeGen.Pipeline/Novolis.CodeGen.Pipeline.csproj" />
+    <Project Path="src/Novolis.CodeGen.Bindings/Novolis.CodeGen.Bindings.csproj" />
+    <Project Path="src/Novolis.CodeGen.Bindings.Roslyn/Novolis.CodeGen.Bindings.Roslyn.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Novolis.CodeGen.Unit/Novolis.CodeGen.Unit.csproj" />
-    </Folder>
+    <Project Path="tests/Novolis.CodeGen.Bindings.Unit/Novolis.CodeGen.Bindings.Unit.csproj" />
+  </Folder>
 </Solution>

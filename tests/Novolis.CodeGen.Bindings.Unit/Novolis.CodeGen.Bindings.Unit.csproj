@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Novolis.CodeGen.Bindings.Unit</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TUnit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Novolis.CodeGen.Bindings/Novolis.CodeGen.Bindings.csproj" />
+    <ProjectReference Include="../../src/Novolis.CodeGen.Pipeline/Novolis.CodeGen.Pipeline.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../fixtures/raylib6/**" CopyToOutputDirectory="PreserveNewest" Link="fixtures/raylib6/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>
