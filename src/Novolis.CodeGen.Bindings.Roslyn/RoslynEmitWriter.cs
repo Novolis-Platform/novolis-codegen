@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Novolis.CodeGen.Bindings.Roslyn;
 
 /// <summary>Roslyn syntax transform hook invoked during binding emit.</summary>
-/// <typeparam name="TPhase">Emitter phase enum.</typeparam>
+/// <typeparam name="TPhase">Emitter phase enum defined by the consumer.</typeparam>
 /// <typeparam name="TContext">Emit context type (typically <see cref="Bindings.BindingEmitContext"/>).</typeparam>
 public interface ICodegenHook<TPhase, in TContext>
     where TPhase : struct, Enum
@@ -43,8 +43,8 @@ public static class CodegenSyntaxParser
 }
 
 /// <summary>Applies Roslyn hooks and formatting when writing generated binding files.</summary>
-/// <typeparam name="TPhase">Emitter phase enum.</typeparam>
-/// <typeparam name="TContext">Emit context type.</typeparam>
+/// <typeparam name="TPhase">Emitter phase enum defined by the consumer.</typeparam>
+/// <typeparam name="TContext">Emit context type (must inherit <see cref="Bindings.BindingEmitContext"/>).</typeparam>
 public static class RoslynEmitWriter<TPhase, TContext>
     where TPhase : struct, Enum
     where TContext : Bindings.BindingEmitContext

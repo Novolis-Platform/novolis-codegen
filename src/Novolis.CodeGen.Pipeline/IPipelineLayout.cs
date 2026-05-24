@@ -9,7 +9,11 @@ public interface IPipelineLayout
     /// <summary>Root directory containing per-step folders.</summary>
     string StepsRoot { get; }
 
-    /// <summary>Directory containing JSON manifest inputs.</summary>
+    /// <summary>Directory containing binding manifest inputs (consumer-defined layout).</summary>
+    /// <remarks>
+    /// For C#-authoritative manifests, this typically points at the project folder that defines
+    /// manifest fragments (for example <c>codegen/Novolis.Raylib.Manifests</c> in the raylib consumer).
+    /// </remarks>
     string ManifestDir { get; }
 
     /// <summary>Directory for a step's logs and <c>result.json</c>.</summary>
