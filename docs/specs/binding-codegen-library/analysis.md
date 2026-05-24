@@ -4,6 +4,8 @@
 **Reference:** [initial-idea.md](./initial-idea.md) vs [novolis-raylib](https://github.com/Novolis-Platform/novolis-raylib) codegen as of the current tree  
 **Purpose:** Poke holes in the draft spec, map each to evidence in the reference implementation, and propose concrete plugs.
 
+> **Visual summary:** see [summary.md](./summary.md) for diagrams, heatmap, and prioritized path. This file is the full drill-down.
+
 ---
 
 ## Executive summary
