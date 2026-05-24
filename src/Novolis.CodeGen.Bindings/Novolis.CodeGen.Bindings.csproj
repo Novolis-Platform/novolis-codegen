@@ -1,4 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="System.IO.Abstractions" />
+  </ItemGroup>
+
   <PropertyGroup>
     <PackageId>Novolis.CodeGen.Bindings</PackageId>
     <Description>Manifest fragments, merge plans, and binding codegen orchestration.</Description>

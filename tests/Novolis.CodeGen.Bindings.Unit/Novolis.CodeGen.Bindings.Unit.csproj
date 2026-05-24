@@ -10,8 +10,6 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Novolis.CodeGen.Bindings/Novolis.CodeGen.Bindings.csproj" />
     <ProjectReference Include="../../src/Novolis.CodeGen.Pipeline/Novolis.CodeGen.Pipeline.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="../fixtures/raylib6/**" CopyToOutputDirectory="PreserveNewest" Link="fixtures/raylib6/%(RecursiveDir)%(Filename)%(Extension)" />
+    <ProjectReference Include="../../../novolis-raylib/codegen/Novolis.Raylib.Manifests/Novolis.Raylib.Manifests.csproj" />
   </ItemGroup>
 </Project>

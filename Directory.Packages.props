@@ -10,5 +10,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
     <PackageVersion Include="TUnit" Version="1.44.39" />
     <PackageVersion Include="VarDump" Version="1.0.5.17" />
+    <PackageVersion Include="System.IO.Abstractions" Version="22.1.0" />
+    <PackageVersion Include="System.IO.Abstractions.TestingHelpers" Version="22.1.0" />
   </ItemGroup>
 </Project>

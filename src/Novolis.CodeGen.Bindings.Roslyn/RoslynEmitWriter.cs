@@ -44,11 +44,16 @@ public static class RoslynEmitWriter<TPhase, TContext>
             ? unit.NormalizeWhitespace(eol: Environment.NewLine).ToFullString()
             : CodegenFormatter.FormatCompilationUnit(unit);
 
-        Directory.CreateDirectory(Path.GetDirectoryName(context.OutputPath)!);
+        var outputDirectory = context.Environment.FileSystem.Path.GetDirectoryName(context.OutputPath);
+        if (!string.IsNullOrEmpty(outputDirectory))
+            context.Environment.FileSystem.Directory.CreateDirectory(outputDirectory);
         if (!formatted.EndsWith('\n'))
             formatted += Environment.NewLine;
 
-        File.WriteAllText(context.OutputPath, formatted, new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        context.Environment.FileSystem.File.WriteAllText(
+            context.OutputPath,
+            formatted,
+            new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 }
 

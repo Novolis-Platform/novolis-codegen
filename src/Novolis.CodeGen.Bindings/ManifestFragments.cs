@@ -5,12 +5,6 @@ public interface IManifestFragment
     string Id { get; }
 
     FragmentKind Kind { get; }
-
-    string FileName { get; }
-
-    byte[] ToUtf8Bytes();
-
-    string Sha256Hex();
 }
 
 public sealed record InteropPolicySpec(
@@ -40,12 +34,6 @@ public sealed record InteropExportsFragment(
     IReadOnlyList<InteropImportSpec> Imports) : IManifestFragment
 {
     public FragmentKind Kind => FragmentKind.InteropExports;
-
-    public string FileName => "raylib-exports.manifest.json";
-
-    public byte[] ToUtf8Bytes() => InteropExportsSerializer.SerializeToUtf8Bytes(this);
-
-    public string Sha256Hex() => ManifestHashing.Sha256Hex(ToUtf8Bytes());
 }
 
 public sealed record ShimExportSpec(string Export, string Template);
@@ -59,17 +47,6 @@ public sealed record ShimExportsFragment(
     IReadOnlyList<ShimExportSpec> Exports) : IManifestFragment
 {
     public FragmentKind Kind => FragmentKind.ShimExports;
-
-    public string FileName => Id switch
-    {
-        "imgui" => "imgui-exports.manifest.json",
-        "raygui" => "raygui-exports.manifest.json",
-        _ => $"{Id}-exports.manifest.json",
-    };
-
-    public byte[] ToUtf8Bytes() => ShimExportsSerializer.SerializeToUtf8Bytes(this);
-
-    public string Sha256Hex() => ManifestHashing.Sha256Hex(ToUtf8Bytes());
 }
 
 public sealed record DebugSymbolMapSpec(
@@ -89,12 +66,6 @@ public sealed record DebugConfigFragment(
     DebugSymbolMapSpec Symbols) : IManifestFragment
 {
     public FragmentKind Kind => FragmentKind.DebugConfig;
-
-    public string FileName => "raylib-debug.manifest.json";
-
-    public byte[] ToUtf8Bytes() => DebugConfigSerializer.SerializeToUtf8Bytes(this);
-
-    public string Sha256Hex() => ManifestHashing.Sha256Hex(ToUtf8Bytes());
 }
 
 public sealed record FacadeMethodSpec(
@@ -116,23 +87,32 @@ public sealed record FacadeTypesFragment(
     IReadOnlyList<FacadeTypeSpec> Types) : IManifestFragment
 {
     public FragmentKind Kind => FragmentKind.FacadeTypes;
-
-    public string FileName => Id switch
-    {
-        "facades" => "facades.manifest.json",
-        "hud" => "hud.manifest.json",
-        "gui" => "gui.manifest.json",
-        "raygui" => "raygui.manifest.json",
-        _ => $"{Id}.manifest.json",
-    };
-
-    public byte[] ToUtf8Bytes() => FacadeTypesSerializer.SerializeToUtf8Bytes(this);
-
-    public string Sha256Hex() => ManifestHashing.Sha256Hex(ToUtf8Bytes());
 }
 
 public static class ManifestHashing
 {
     public static string Sha256Hex(ReadOnlySpan<byte> bytes) =>
         Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)).ToLowerInvariant();
+}
+
+public static class ManifestSemanticEquality
+{
+    public static bool InteropEquals(InteropExportsFragment a, InteropExportsFragment b) =>
+        a.DllName == b.DllName &&
+        a.Imports.Count == b.Imports.Count &&
+        a.Imports.OrderBy(i => i.Name).SequenceEqual(b.Imports.OrderBy(i => i.Name));
+
+    public static bool ShimEquals(ShimExportsFragment a, ShimExportsFragment b) =>
+        a.Exports.Count == b.Exports.Count &&
+        a.Exports.OrderBy(e => e.Export).SequenceEqual(b.Exports.OrderBy(e => e.Export));
+
+    public static bool DebugEquals(DebugConfigFragment a, DebugConfigFragment b) =>
+        a.NotifyAfterNativeCall == b.NotifyAfterNativeCall &&
+        a.FrameHubNotifyAfter == b.FrameHubNotifyAfter &&
+        a.Symbols.LoadImageFromScreen == b.Symbols.LoadImageFromScreen;
+
+    public static bool FacadeEquals(FacadeTypesFragment a, FacadeTypesFragment b) =>
+        a.Id == b.Id && a.Types.Count == b.Types.Count &&
+        a.Types.Zip(b.Types).All(pair => pair.First.Name == pair.Second.Name &&
+                                         pair.First.Methods.Count == pair.Second.Methods.Count);
 }
