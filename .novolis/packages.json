@@ -4,7 +4,7 @@
       "project": "src/Novolis.CodeGen.Reflection/Novolis.CodeGen.Reflection.csproj",
       "paths": [
         "src/Novolis.CodeGen.Reflection/**",
-        "tests/Novolis.CodeGen.Reflection.Tests/**",
+        "tests/Novolis.CodeGen.Unit/Reflection/**",
         "Directory.Build.props",
         "Directory.Packages.props",
         "global.json",
@@ -16,7 +16,7 @@
       "paths": [
         "src/Novolis.CodeGen.Reflection.Dump/**",
         "src/Novolis.CodeGen.Reflection/**",
-        "tests/Novolis.CodeGen.Reflection.Dump.Tests/**",
+        "tests/Novolis.CodeGen.Unit/Reflection.Dump/**",
         "Directory.Build.props",
         "Directory.Packages.props",
         "global.json",
@@ -28,7 +28,7 @@
       "paths": [
         "src/Novolis.CodeGen.Reflection.ClassDiagram/**",
         "src/Novolis.CodeGen.Reflection/**",
-        "tests/Novolis.CodeGen.Reflection.ClassDiagram.Tests/**",
+        "tests/Novolis.CodeGen.Unit/Reflection.ClassDiagram/**",
         "Directory.Build.props",
         "Directory.Packages.props",
         "global.json",

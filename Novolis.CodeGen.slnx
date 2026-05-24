@@ -5,8 +5,6 @@
     <Project Path="src/Novolis.CodeGen.Reflection.ClassDiagram/Novolis.CodeGen.Reflection.ClassDiagram.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/Novolis.CodeGen.Reflection.Tests/Novolis.CodeGen.Reflection.Tests.csproj" />
-    <Project Path="tests/Novolis.CodeGen.Reflection.Dump.Tests/Novolis.CodeGen.Reflection.Dump.Tests.csproj" />
-    <Project Path="tests/Novolis.CodeGen.Reflection.ClassDiagram.Tests/Novolis.CodeGen.Reflection.ClassDiagram.Tests.csproj" />
-  </Folder>
+    <Project Path="tests/Novolis.CodeGen.Unit/Novolis.CodeGen.Unit.csproj" />
+    </Folder>
 </Solution>
