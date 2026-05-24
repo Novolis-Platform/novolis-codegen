@@ -1,6 +1,4 @@
 namespace Novolis.CodeGen.Reflection.ClassDiagram;
 
-public interface IClassDiagramBuilder : IDiagramBuilder
-{
-    
-}
+/// <summary>Builds a Mermaid class diagram for an assembly.</summary>
+public interface IClassDiagramBuilder : IDiagramBuilder;

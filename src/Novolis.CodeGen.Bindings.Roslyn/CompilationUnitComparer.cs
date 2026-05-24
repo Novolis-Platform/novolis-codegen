@@ -4,8 +4,15 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Novolis.CodeGen.Bindings.Roslyn;
 
+/// <summary>Compares generated and committed Roslyn compilation units for structural equivalence.</summary>
 public static class CompilationUnitComparer
 {
+    /// <summary>
+    /// Returns whether committed and emitted source are structurally equivalent (ignoring insignificant whitespace).
+    /// </summary>
+    /// <param name="committedSource">Source currently in the repository.</param>
+    /// <param name="emittedSource">Freshly generated source.</param>
+    /// <returns><see langword="true"/> when equivalent.</returns>
     public static bool AreStructurallyEquivalent(string committedSource, string emittedSource)
     {
         var committed = CodegenSyntaxParser.ParseGenerated(committedSource);
@@ -13,6 +20,12 @@ public static class CompilationUnitComparer
         return AreStructurallyEquivalent(committed, emitted);
     }
 
+    /// <summary>
+    /// Returns whether two compilation units are structurally equivalent (member count and normalized member text).
+    /// </summary>
+    /// <param name="committed">Committed compilation unit.</param>
+    /// <param name="emitted">Emitted compilation unit.</param>
+    /// <returns><see langword="true"/> when equivalent.</returns>
     public static bool AreStructurallyEquivalent(CompilationUnitSyntax committed, CompilationUnitSyntax emitted)
     {
         var committedMembers = committed.Members.Select(NormalizeMember).ToList();

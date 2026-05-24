@@ -1,16 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <RootNamespace>Novolis.CodeGen.Bindings.Unit</RootNamespace>
-    <IsPackable>false</IsPackable>
-    <IsTestProject>true</IsTestProject>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="TUnit" />
-    <PackageReference Include="System.IO.Abstractions.TestingHelpers" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="../../src/Novolis.CodeGen.Bindings/Novolis.CodeGen.Bindings.csproj" />
-    <ProjectReference Include="../../src/Novolis.CodeGen.Pipeline/Novolis.CodeGen.Pipeline.csproj" />
-    <ProjectReference Include="../../../novolis-raylib/codegen/Novolis.Raylib.Manifests/Novolis.Raylib.Manifests.csproj" />
-  </ItemGroup>
-</Project>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Novolis.CodeGen.Bindings.Unit</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Novolis.Raylib.Manifests" />
+    <PackageReference Include="TUnit" />
+    <PackageReference Include="System.IO.Abstractions.TestingHelpers" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Novolis.CodeGen.Bindings/Novolis.CodeGen.Bindings.csproj" />
+    <ProjectReference Include="../../src/Novolis.CodeGen.Pipeline/Novolis.CodeGen.Pipeline.csproj" />
+  </ItemGroup>
+</Project>

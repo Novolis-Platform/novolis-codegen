@@ -12,5 +12,6 @@
     <PackageVersion Include="VarDump" Version="1.0.5.17" />
     <PackageVersion Include="System.IO.Abstractions" Version="22.1.0" />
     <PackageVersion Include="System.IO.Abstractions.TestingHelpers" Version="22.1.0" />
+    <PackageVersion Include="Novolis.Raylib.Manifests" Version="2026.1.*" />
   </ItemGroup>
 </Project>

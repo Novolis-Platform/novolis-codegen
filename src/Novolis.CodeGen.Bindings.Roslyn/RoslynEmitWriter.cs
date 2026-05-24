@@ -3,32 +3,58 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Novolis.CodeGen.Bindings.Roslyn;
 
+/// <summary>Roslyn syntax transform hook invoked during binding emit.</summary>
+/// <typeparam name="TPhase">Emitter phase enum.</typeparam>
+/// <typeparam name="TContext">Emit context type (typically <see cref="Bindings.BindingEmitContext"/>).</typeparam>
 public interface ICodegenHook<TPhase, in TContext>
     where TPhase : struct, Enum
 {
+    /// <summary>Execution order within the same <see cref="Phase"/> (lower runs first).</summary>
     int Order { get; }
 
+    /// <summary>Phase this hook applies to.</summary>
     TPhase Phase { get; }
 
+    /// <summary>Transforms the compilation unit for the current phase.</summary>
+    /// <param name="unit">Parsed generated source.</param>
+    /// <param name="context">Emit context.</param>
+    /// <returns>Transformed compilation unit.</returns>
     CompilationUnitSyntax Transform(CompilationUnitSyntax unit, TContext context);
 }
 
+/// <summary>How emitted Roslyn syntax is formatted before writing to disk.</summary>
 public enum FormatPolicy
 {
+    /// <summary>Use the Roslyn workspace formatter.</summary>
     RoslynFormatter,
+
+    /// <summary>Normalize whitespace only (faster, less opinionated).</summary>
     NormalizeWhitespace,
 }
 
+/// <summary>Parses generated C# source into Roslyn syntax trees.</summary>
 public static class CodegenSyntaxParser
 {
+    /// <summary>Parses generated source text into a <see cref="CompilationUnitSyntax"/>.</summary>
+    /// <param name="source">Generated C# source.</param>
+    /// <returns>Root compilation unit.</returns>
     public static CompilationUnitSyntax ParseGenerated(string source) =>
         (CompilationUnitSyntax)Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(source, path: "").GetRoot();
 }
 
+/// <summary>Applies Roslyn hooks and formatting when writing generated binding files.</summary>
+/// <typeparam name="TPhase">Emitter phase enum.</typeparam>
+/// <typeparam name="TContext">Emit context type.</typeparam>
 public static class RoslynEmitWriter<TPhase, TContext>
     where TPhase : struct, Enum
     where TContext : Bindings.BindingEmitContext
 {
+    /// <summary>Parses, transforms, formats, and writes generated source to <see cref="Bindings.BindingEmitContext.OutputPath"/>.</summary>
+    /// <param name="rawSource">Unformatted generated C# source.</param>
+    /// <param name="context">Emit context (paths and environment).</param>
+    /// <param name="phase">Current emit phase for hook selection.</param>
+    /// <param name="hooks">Registered codegen hooks.</param>
+    /// <param name="formatPolicy">Formatting policy.</param>
     public static void WriteFile(
         string rawSource,
         TContext context,

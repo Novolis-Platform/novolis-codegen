@@ -3,15 +3,19 @@ using System.Text;
 
 namespace Novolis.CodeGen.Reflection.ClassDiagram;
 
+/// <summary>Builds a Mermaid <c>classDiagram</c> from all types in an assembly.</summary>
 public class ClassDiagramBuilder : IClassDiagramBuilder
 {
     private readonly Assembly _assembly;
 
+    /// <summary>Creates a builder for <paramref name="assembly"/>.</summary>
+    /// <param name="assembly">Assembly to diagram.</param>
     public ClassDiagramBuilder(Assembly assembly)
     {
         _assembly = assembly;
     }
 
+    /// <inheritdoc />
     public string Build()
     {
         var types = _assembly.GetTypes();

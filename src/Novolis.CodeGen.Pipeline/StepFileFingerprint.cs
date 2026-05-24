@@ -2,17 +2,28 @@ using System.Security.Cryptography;
 
 namespace Novolis.CodeGen.Pipeline;
 
+/// <summary>SHA-256 fingerprinting for pipeline inputs and outputs.</summary>
 public static class StepFileFingerprint
 {
+    /// <summary>Computes lowercase hex SHA-256 of a file.</summary>
+    /// <param name="path">Absolute file path.</param>
+    /// <returns>64-character hex digest.</returns>
     public static string Sha256Hex(string path)
     {
         var bytes = File.ReadAllBytes(path);
         return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
     }
 
+    /// <summary>Computes lowercase hex SHA-256 of a byte span.</summary>
+    /// <param name="bytes">Content to hash.</param>
+    /// <returns>64-character hex digest.</returns>
     public static string Sha256Hex(ReadOnlySpan<byte> bytes) =>
         Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
 
+    /// <summary>Builds a relative-path to SHA-256 map for existing input files.</summary>
+    /// <param name="paths">Input paths (absolute or relative to <paramref name="repoRoot"/>).</param>
+    /// <param name="repoRoot">Repository root for relative paths.</param>
+    /// <returns>Map of repo-relative paths to digests.</returns>
     public static Dictionary<string, string> HashFiles(IEnumerable<string> paths, string repoRoot)
     {
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -29,6 +40,11 @@ public static class StepFileFingerprint
         return map;
     }
 
+    /// <summary>Describes output files with path, digest, and size for <c>result.json</c>.</summary>
+    /// <param name="paths">Output paths.</param>
+    /// <param name="repoRoot">Repository root.</param>
+    /// <param name="stepDirForRelative">When set, paths under this directory are recorded relative to the step folder.</param>
+    /// <returns>Output records for existing files.</returns>
     public static List<StepOutputRecord> DescribeOutputs(
         IEnumerable<string> paths,
         string repoRoot,

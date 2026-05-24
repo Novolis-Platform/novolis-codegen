@@ -2,6 +2,7 @@ using System.Reflection;
 
 namespace Novolis.CodeGen.Reflection;
 
+/// <summary>Display-name helpers for <see cref="ParameterInfo"/>.</summary>
 public static class ParameterInfoExtensions
 {
     /// <summary>
