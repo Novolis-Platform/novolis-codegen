@@ -5,7 +5,6 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Novolis.Raylib.Manifests" />
     <PackageReference Include="TUnit" />
     <PackageReference Include="System.IO.Abstractions.TestingHelpers" />
   </ItemGroup>
