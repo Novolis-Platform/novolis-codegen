@@ -57,4 +57,24 @@ public class DumpExtensionsTests
         await Assert.That(result).Contains("public static Person GetAlice()");
         await Assert.That(result).Contains("public static Person GetBob()");
     }
+
+    [Test]
+    public async Task DumpMethod_and_Roslyn_syntax_helpers()
+    {
+        var data = new Person
+        {
+            Name = "Frank",
+            Age = 30,
+            Address = new Address { Street = "Street", Number = 1 },
+        };
+
+        var method = data.DumpMethod();
+        await Assert.That(method).Contains("Person");
+
+        var classDecl = DumpExtensions.DumpClassDeclarationSyntax(data);
+        await Assert.That(classDecl.Identifier.Text).Contains("Person");
+
+        var methodDecl = DumpExtensions.DumpMethodDeclarationSyntax(data);
+        await Assert.That(methodDecl.ReturnType).IsNotNull();
+    }
 }

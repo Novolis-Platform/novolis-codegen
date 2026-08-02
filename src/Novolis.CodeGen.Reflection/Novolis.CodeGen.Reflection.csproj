@@ -4,4 +4,7 @@
 <Description>Type and reflection display helpers (friendly names, display names).</Description>
     <IsPackable>true</IsPackable>
   </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Novolis.CodeGen.Unit" />
+  </ItemGroup>
 </Project>
