@@ -1,3 +1,11 @@
+<!-- novolis-pkg-brand:start -->
+<p align="center">
+  <a href="https://github.com/Novolis-Platform/novolis-codegen">
+    <img src="https://raw.githubusercontent.com/Novolis-Platform/.github/main/brand/logo-icon.svg" width="72" alt="Novolis"/>
+  </a>
+</p>
+<!-- novolis-pkg-brand:end -->
+
 # Novolis.CodeGen.Reflection.Dump
 
 Var-dump style helpers that emit C# initialization or declaration syntax from runtime objects.
@@ -34,3 +42,4 @@ Useful for tests, debugging, and scaffolding codegen fixtures from live instance
 ## Support
 
 Pre-release platform library. Public API is fully documented with strict XML (`CS1591` enforced).
+

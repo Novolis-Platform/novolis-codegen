@@ -1,3 +1,11 @@
+<!-- novolis-pkg-brand:start -->
+<p align="center">
+  <a href="https://github.com/Novolis-Platform/novolis-codegen">
+    <img src="https://raw.githubusercontent.com/Novolis-Platform/.github/main/brand/logo-icon.svg" width="72" alt="Novolis"/>
+  </a>
+</p>
+<!-- novolis-pkg-brand:end -->
+
 # Novolis.CodeGen.Reflection.ClassDiagram
 
 Build Mermaid `classDiagram` text from reflected types in an assembly — type names, constructors, and diagram structure for docs and diagnostics.
@@ -58,3 +66,4 @@ Pre-release platform library. Diagrams list all public types in the assembly; fi
 
 - [Getting started](../../docs/getting-started.md)
 - [Design](../../docs/design.md)
+

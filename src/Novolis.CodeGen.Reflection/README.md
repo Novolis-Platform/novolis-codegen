@@ -1,3 +1,11 @@
+<!-- novolis-pkg-brand:start -->
+<p align="center">
+  <a href="https://github.com/Novolis-Platform/novolis-codegen">
+    <img src="https://raw.githubusercontent.com/Novolis-Platform/.github/main/brand/logo-icon.svg" width="72" alt="Novolis"/>
+  </a>
+</p>
+<!-- novolis-pkg-brand:end -->
+
 # Novolis.CodeGen.Reflection
 
 Type display helpers for reflection-based codegen and diagnostics.
@@ -36,3 +44,4 @@ var display = typeof(Dictionary<string, object>).GetDisplayName();
 ## Support
 
 Pre-release platform library. Public API is fully documented with strict XML (`CS1591` enforced).
+

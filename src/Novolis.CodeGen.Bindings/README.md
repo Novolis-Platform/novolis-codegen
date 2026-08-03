@@ -1,3 +1,11 @@
+<!-- novolis-pkg-brand:start -->
+<p align="center">
+  <a href="https://github.com/Novolis-Platform/novolis-codegen">
+    <img src="https://raw.githubusercontent.com/Novolis-Platform/.github/main/brand/logo-icon.svg" width="72" alt="Novolis"/>
+  </a>
+</p>
+<!-- novolis-pkg-brand:end -->
+
 # Novolis.CodeGen.Bindings
 
 Manifest fragments, emit orchestration, and filesystem-backed binding codegen for Novolis consumers.
@@ -47,3 +55,4 @@ var options = BindingCodegenOptions.Physical("/path/to/repo", manifests);
 ## Support
 
 Pre-release platform library. Public API is fully documented with strict XML (`CS1591` enforced).
+

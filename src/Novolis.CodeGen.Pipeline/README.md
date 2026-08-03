@@ -1,3 +1,11 @@
+<!-- novolis-pkg-brand:start -->
+<p align="center">
+  <a href="https://github.com/Novolis-Platform/novolis-codegen">
+    <img src="https://raw.githubusercontent.com/Novolis-Platform/.github/main/brand/logo-icon.svg" width="72" alt="Novolis"/>
+  </a>
+</p>
+<!-- novolis-pkg-brand:end -->
+
 # Novolis.CodeGen.Pipeline
 
 Linear step pipeline with fingerprinted skip detection, `step.log`, and `result.json` caching.
@@ -38,3 +46,4 @@ Steps declare `InputPaths` and `ExpectedOutputPaths` for `StepSkipEvaluator` to 
 ## Support
 
 Pre-release platform library. Public API is fully documented with strict XML (`CS1591` enforced).
+

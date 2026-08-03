@@ -1,3 +1,11 @@
+<!-- novolis-pkg-brand:start -->
+<p align="center">
+  <a href="https://github.com/Novolis-Platform/novolis-codegen">
+    <img src="https://raw.githubusercontent.com/Novolis-Platform/.github/main/brand/logo-icon.svg" width="72" alt="Novolis"/>
+  </a>
+</p>
+<!-- novolis-pkg-brand:end -->
+
 # Novolis.CodeGen.Bindings.Roslyn
 
 Roslyn hook host, emit writer, and structural compilation-unit comparison for binding codegen.
@@ -43,3 +51,4 @@ Use `CompilationUnitComparer.AreStructurallyEquivalent` for T1 parity gates betw
 ## Support
 
 Pre-release platform library. Depends on `Microsoft.CodeAnalysis.CSharp`.
+
