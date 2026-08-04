@@ -8,6 +8,7 @@
     <ProjectReference Include="..\Novolis.CodeGen.Reflection\Novolis.CodeGen.Reflection.csproj" />
     <PackageReference Include="Humanizer.Core" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="System.IO.Abstractions" />
     <PackageReference Include="VarDump" />
   </ItemGroup>
 </Project>

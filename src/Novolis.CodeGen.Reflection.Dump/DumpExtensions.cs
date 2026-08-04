@@ -1,3 +1,5 @@
+using System.IO.Abstractions;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -52,6 +54,54 @@ public static class DumpExtensions
     /// <exception cref="Exception">When generated text cannot be parsed as a method.</exception>
     public static MethodDeclarationSyntax DumpMethodDeclarationSyntax<T>(T obj, VarDump.Visitor.DumpOptions? options = null)
         => AsMethodDeclarationSyntax(SyntaxFactory.ParseMemberDeclaration(MethodFactory.CreateMethod(obj, options)) ?? throw new Exception("Could not parse method declaration syntax.")).NormalizeWhitespace();
+
+    /// <summary>Writes a class dump of <paramref name="obj"/> to <paramref name="path"/>.</summary>
+    /// <typeparam name="T">Object type.</typeparam>
+    /// <param name="obj">Object to dump.</param>
+    /// <param name="path">Destination <c>.cs</c> path.</param>
+    /// <param name="fileSystem">Optional file system (defaults to physical).</param>
+    /// <param name="options">Optional dump options.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The path written.</returns>
+    public static async ValueTask<string> DumpClassToFileAsync<T>(
+        this T obj,
+        string path,
+        IFileSystem? fileSystem = null,
+        VarDump.Visitor.DumpOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        var fs = fileSystem ?? new FileSystem();
+        var directory = fs.Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory))
+            fs.Directory.CreateDirectory(directory);
+        await fs.File.WriteAllTextAsync(path, obj.DumpClass(options), cancellationToken).ConfigureAwait(false);
+        return path;
+    }
+
+    /// <summary>Writes a variable dump of <paramref name="obj"/> to <paramref name="path"/>.</summary>
+    /// <typeparam name="T">Object type.</typeparam>
+    /// <param name="obj">Object to dump.</param>
+    /// <param name="path">Destination <c>.cs</c> path.</param>
+    /// <param name="fileSystem">Optional file system (defaults to physical).</param>
+    /// <param name="options">Optional dump options.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The path written.</returns>
+    public static async ValueTask<string> DumpVarToFileAsync<T>(
+        this T obj,
+        string path,
+        IFileSystem? fileSystem = null,
+        VarDump.Visitor.DumpOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        var fs = fileSystem ?? new FileSystem();
+        var directory = fs.Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory))
+            fs.Directory.CreateDirectory(directory);
+        await fs.File.WriteAllTextAsync(path, obj.DumpVar(options), cancellationToken).ConfigureAwait(false);
+        return path;
+    }
 
     private static MethodDeclarationSyntax AsMethodDeclarationSyntax(MemberDeclarationSyntax memberDeclarationSyntax)
         => memberDeclarationSyntax as MethodDeclarationSyntax ?? throw new Exception("Could not parse method declaration syntax.");

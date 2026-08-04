@@ -5,6 +5,7 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="System.IO.Abstractions.TestingHelpers" />
     <PackageReference Include="TUnit" />
   </ItemGroup>
   <ItemGroup>

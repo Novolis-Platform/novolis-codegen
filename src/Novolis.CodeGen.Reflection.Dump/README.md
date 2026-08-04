@@ -25,9 +25,14 @@ using Novolis.CodeGen.Reflection.Dump;
 
 var source = myObject.DumpVar();
 var classSource = myObject.DumpClass();
+
+// Persist dumps as .cs files (e.g. trained ML snapshots as fixtures)
+var store = new DumpFileStore(@"d:\data\dumps");
+await store.SaveClassAsync("best-policy", myObject);
+await myObject.DumpClassToFileAsync(@"d:\data\dumps\best-policy.cs");
 ```
 
-Useful for tests, debugging, and scaffolding codegen fixtures from live instances.
+Useful for tests, debugging, scaffolding codegen fixtures from live instances, and storing model snapshots as compilable C#.
 
 ## Related packages
 
