@@ -9,7 +9,7 @@ public sealed class BindingCodegenHostTests
     [Test]
     public async Task BindingCodegenOptions_Physical_sets_defaults()
     {
-        const string repoRoot = @"C:\novolis\binding-options";
+        var repoRoot = TestPaths.Root("binding-options");
         var fragment = new InteropExportsFragment("raylib", 1, null, null, "raylib", EmptyPolicy, [], []);
         var source = BindingManifestSource.Create(fragment);
         var options = BindingCodegenOptions.Physical(repoRoot, source);
@@ -24,7 +24,7 @@ public sealed class BindingCodegenHostTests
     [Test]
     public async Task EmitRequest_and_BindingEmitContext_round_trip()
     {
-        const string repoRoot = @"C:\novolis\emit-request";
+        var repoRoot = TestPaths.Root("emit-request");
         var fragment = new InteropExportsFragment("raylib", 1, null, null, "raylib", EmptyPolicy, [], []);
         var env = CodegenEnvironment.Physical(repoRoot);
         var context = new BindingEmitContext

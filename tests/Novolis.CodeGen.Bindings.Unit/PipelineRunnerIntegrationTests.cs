@@ -167,9 +167,9 @@ public sealed class RoslynEmitWriterTests
     [Test]
     public async Task WriteFile_applies_hooks_and_writes_to_virtual_fs()
     {
-        const string repoRoot = @"C:\codegen-emit";
+        var repoRoot = TestPaths.Root("codegen-emit");
         var fs = new MockFileSystem(new Dictionary<string, MockFileData>(), repoRoot);
-        var context = CreateContext(fs, repoRoot, @"generated\Sample.g.cs");
+        var context = CreateContext(fs, repoRoot, Path.Combine("generated", "Sample.g.cs"));
         const string raw = "namespace N { class C { void M() { var x = List<int>.Empty; } } }";
 
         RoslynEmitWriter<TestPhase, TestEmitContext>.WriteFile(
@@ -179,8 +179,9 @@ public sealed class RoslynEmitWriterTests
             [new AddUsingHook()],
             FormatPolicy.NormalizeWhitespace);
 
-        await Assert.That(fs.FileExists(@"C:\codegen-emit\generated\Sample.g.cs")).IsTrue();
-        var text = fs.File.ReadAllText(@"C:\codegen-emit\generated\Sample.g.cs");
+        var outPath = TestPaths.Combine(repoRoot, "generated", "Sample.g.cs");
+        await Assert.That(fs.FileExists(outPath)).IsTrue();
+        var text = fs.File.ReadAllText(outPath);
         await Assert.That(text).Contains("System.Collections.Generic");
         await Assert.That(text.EndsWith('\n')).IsTrue();
     }
@@ -188,9 +189,9 @@ public sealed class RoslynEmitWriterTests
     [Test]
     public async Task WriteFile_roslyn_formatter_policy()
     {
-        const string repoRoot = @"C:\codegen-format";
+        var repoRoot = TestPaths.Root("codegen-format");
         var fs = new MockFileSystem(new Dictionary<string, MockFileData>(), repoRoot);
-        var context = CreateContext(fs, repoRoot, @"generated\Formatted.g.cs");
+        var context = CreateContext(fs, repoRoot, Path.Combine("generated", "Formatted.g.cs"));
         const string raw = "namespace N{class C{public void M(){}}";
 
         RoslynEmitWriter<TestPhase, TestEmitContext>.WriteFile(
@@ -200,7 +201,7 @@ public sealed class RoslynEmitWriterTests
             [],
             FormatPolicy.RoslynFormatter);
 
-        var text = fs.File.ReadAllText(@"C:\codegen-format\generated\Formatted.g.cs");
+        var text = fs.File.ReadAllText(TestPaths.Combine(repoRoot, "generated", "Formatted.g.cs"));
         await Assert.That(text).Contains("namespace N");
         await Assert.That(text).Contains("class C");
     }

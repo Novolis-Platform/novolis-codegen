@@ -193,7 +193,7 @@ public sealed class BindingProjectTests
     [Test]
     public async Task ValidateCompanions_throws_when_missing()
     {
-        const string repoRoot = @"C:\novolis\binding-test";
+        var repoRoot = TestPaths.Root("binding-test");
         var fileSystem = new System.IO.Abstractions.TestingHelpers.MockFileSystem(new Dictionary<string, System.IO.Abstractions.TestingHelpers.MockFileData>(), repoRoot);
         var env = new CodegenEnvironment { FileSystem = fileSystem, RepoRoot = repoRoot };
         var project = BindingProject.Create("test").RequireCompanion("missing.txt", "required");
@@ -205,11 +205,12 @@ public sealed class BindingProjectTests
     [Test]
     public async Task ValidateCompanions_passes_when_present()
     {
-        const string repoRoot = @"C:\novolis\binding-test-ok";
+        var repoRoot = TestPaths.Root("binding-test-ok");
+        var companion = TestPaths.Combine(repoRoot, "companion.txt");
         var fileSystem = new System.IO.Abstractions.TestingHelpers.MockFileSystem(
             new Dictionary<string, System.IO.Abstractions.TestingHelpers.MockFileData>
             {
-                [@"C:\novolis\binding-test-ok\companion.txt"] = new("ok"),
+                [companion] = new("ok"),
             },
             repoRoot);
         var env = new CodegenEnvironment { FileSystem = fileSystem, RepoRoot = repoRoot };

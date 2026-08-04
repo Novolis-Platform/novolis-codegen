@@ -8,7 +8,7 @@ public sealed class CodegenEnvironmentTests
     [Test]
     public async Task CodegenEnvironment_reads_and_writes_bytes()
     {
-        const string repoRoot = @"C:\novolis\codegen-env";
+        var repoRoot = TestPaths.Root("codegen-env");
         var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>(), repoRoot);
         var env = new CodegenEnvironment { FileSystem = fileSystem, RepoRoot = repoRoot };
 
@@ -18,10 +18,11 @@ public sealed class CodegenEnvironmentTests
         var fileBytes = env.ReadAllBytes("src/input.txt");
         await Assert.That(fileBytes.Length).IsEqualTo(5);
         await Assert.That(System.Text.Encoding.UTF8.GetString(fileBytes)).IsEqualTo("hello");
-        await Assert.That(env.Combine("generated", "out.cs")).IsEqualTo(@"C:\novolis\codegen-env\generated\out.cs");
+        await Assert.That(env.Combine("generated", "out.cs")).IsEqualTo(TestPaths.Combine(repoRoot, "generated", "out.cs"));
 
-        env.WriteAllTextAbsolute(@"C:\novolis\codegen-env\abs\file.cs", "// abs");
-        await Assert.That(fileSystem.File.ReadAllText(@"C:\novolis\codegen-env\abs\file.cs")).IsEqualTo("// abs");
+        var abs = TestPaths.Combine(repoRoot, "abs", "file.cs");
+        env.WriteAllTextAbsolute(abs, "// abs");
+        await Assert.That(fileSystem.File.ReadAllText(abs)).IsEqualTo("// abs");
     }
 
     [Test]
