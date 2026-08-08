@@ -13,7 +13,8 @@ public sealed class ComplexTypeNode
         bool isAbstract,
         BinaryFacet binaryFacet,
         bool hasSimpleContent = false,
-        string? simpleContentClrType = null)
+        string? simpleContentClrType = null,
+        string? simpleContentXmlDataType = null)
     {
         Id = id;
         CSharpName = csharpName;
@@ -24,6 +25,7 @@ public sealed class ComplexTypeNode
         BinaryFacet = binaryFacet;
         HasSimpleContent = hasSimpleContent;
         SimpleContentClrType = simpleContentClrType;
+        SimpleContentXmlDataType = simpleContentXmlDataType;
     }
 
     /// <summary>Type identity.</summary>
@@ -52,4 +54,7 @@ public sealed class ComplexTypeNode
 
     /// <summary>CLR type for simple content text (e.g. <c>string</c>, <c>byte[]</c>).</summary>
     public string? SimpleContentClrType { get; }
+
+    /// <summary>Optional <c>XmlText(DataType=…)</c> lexical hint (<c>date</c>, <c>time</c>, <c>dateTime</c>, …).</summary>
+    public string? SimpleContentXmlDataType { get; }
 }

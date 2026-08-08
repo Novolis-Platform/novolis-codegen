@@ -38,6 +38,19 @@ public sealed class SchemaGraphBuilderCoverageTests
     }
 
     [Test]
+    public async Task AnyParticle_And_DateXmlDataType_AreMapped()
+    {
+        var graph = SchemaGraphBuilder.BuildFromFiles([Path.Combine(FixturesDir, "any.xsd")]);
+        var envelope = graph.ComplexById[new SchemaTypeId("urn:novolis:codegen:any", "EnvelopeType")];
+        await Assert.That(envelope.Particle!.Children.Any(c => c.Kind == ParticleKind.Any)).IsTrue();
+
+        var dateWrap = graph.ComplexById[new SchemaTypeId("urn:novolis:codegen:any", "DateWrapType")];
+        await Assert.That(dateWrap.HasSimpleContent).IsTrue();
+        await Assert.That(dateWrap.SimpleContentClrType).IsEqualTo("DateTime");
+        await Assert.That(dateWrap.SimpleContentXmlDataType).IsEqualTo("date");
+    }
+
+    [Test]
     public async Task LoadFromFiles_EmptyWhitespaceRoot_Throws()
     {
         await Assert.That(() => SchemaSetLoader.LoadFromDirectory("   "))
@@ -134,8 +147,10 @@ public sealed class SchemaGraphBuilderCoverageTests
         await Assert.That(swrap.SimpleContentClrType).IsEqualTo("short");
         var dwrap = graph.ComplexById[new SchemaTypeId("urn:novolis:codegen:edges", "DateWrapType")];
         await Assert.That(dwrap.SimpleContentClrType).IsEqualTo("DateTime");
+        await Assert.That(dwrap.SimpleContentXmlDataType).IsEqualTo("date");
         var twrap = graph.ComplexById[new SchemaTypeId("urn:novolis:codegen:edges", "TimeWrapType")];
         await Assert.That(twrap.SimpleContentClrType).IsEqualTo("DateTime");
+        await Assert.That(twrap.SimpleContentXmlDataType).IsEqualTo("time");
 
         var upgrade = graph.SimpleById[new SchemaTypeId("urn:novolis:codegen:edges", "UpgradeBinaryObject")];
         await Assert.That(upgrade.BinaryFacet).IsEqualTo(BinaryFacet.BinaryObject);
@@ -300,7 +315,8 @@ public sealed class SchemaGraphBuilderCoverageTests
         await Assert.That(none).IsNull();
 
         var any = mapParticle.Invoke(null, [new XmlSchemaAny(), referenced]);
-        await Assert.That(any).IsNull();
+        await Assert.That(any).IsNotNull();
+        await Assert.That(((Particle)any!).Kind).IsEqualTo(ParticleKind.Any);
 
         var groupRef = new XmlSchemaGroupRef();
         var fromGroup = mapParticle.Invoke(null, [groupRef, referenced]);

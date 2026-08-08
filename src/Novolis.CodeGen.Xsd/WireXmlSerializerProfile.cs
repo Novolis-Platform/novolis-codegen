@@ -25,7 +25,9 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
             ["short"] = "short",
             ["dateTime"] = "System.DateTime",
             ["date"] = "System.DateTime",
-            ["time"] = "System.DateTime"
+            ["time"] = "System.DateTime",
+            ["anyType"] = "System.Xml.XmlElement",
+            ["anySimpleType"] = "string"
         }.ToFrozenDictionary(StringComparer.Ordinal);
 
     private static readonly FrozenSet<string> ReservedPropNames =
@@ -45,7 +47,7 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
 
         var include = options.IncludeTypeIds;
         var complex = include is null
-            ? graph.ComplexTypes
+            ? graph.ComplexTypes.Where(t => t.Id.NamespaceName != "http://www.w3.org/2001/XMLSchema").ToArray()
             : graph.ComplexTypes.Where(t => include.Contains(t.Id)).ToArray();
         var simple = include is null
             ? graph.SimpleTypes.Where(s => s.Id.NamespaceName != "http://www.w3.org/2001/XMLSchema").ToArray()
@@ -196,6 +198,7 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
                 UsingDirective(ParseName("System")),
                 UsingDirective(ParseName("System.Collections.Generic")),
                 UsingDirective(ParseName("System.Collections.ObjectModel")),
+                UsingDirective(ParseName("System.Xml")),
                 UsingDirective(ParseName("System.Xml.Serialization")))
             .AddMembers(FileScopedNamespaceDeclaration(ParseName(ns)).AddMembers(iface, cls))
             .NormalizeWhitespace();
@@ -268,8 +271,23 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
         {
             var clr = type.SimpleContentClrType
                       ?? (type.BinaryFacet != BinaryFacet.None ? "byte[]" : "string");
-            var xmlText = AttributeList(SingletonSeparatedList(Attribute(IdentifierName("XmlText"))));
-            yield return new PropSpec(SanitizeProp("Value", enclosingTypeName), ParseTypeName(clr), [xmlText]);
+            var xmlText = Attribute(IdentifierName("XmlText"));
+            if (!string.IsNullOrEmpty(type.SimpleContentXmlDataType))
+            {
+                xmlText = xmlText.WithArgumentList(AttributeArgumentList(SingletonSeparatedList(
+                    AttributeArgument(
+                        AssignmentExpression(
+                            SyntaxKind.SimpleAssignmentExpression,
+                            IdentifierName("DataType"),
+                            LiteralExpression(
+                                SyntaxKind.StringLiteralExpression,
+                                Literal(type.SimpleContentXmlDataType!)))))));
+            }
+
+            yield return new PropSpec(
+                SanitizeProp("Value", enclosingTypeName),
+                ParseTypeName(clr),
+                [AttributeList(SingletonSeparatedList(xmlText))]);
         }
 
         if (type.Particle is { } particle)
@@ -285,6 +303,12 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
         EmitOptions options,
         string enclosingTypeName)
     {
+        if (particle.Kind == ParticleKind.Any)
+        {
+            yield return AnyProp(particle, enclosingTypeName);
+            yield break;
+        }
+
         if (particle.Kind == ParticleKind.Element)
         {
             yield return ElementProp(graph, particle, options, enclosingTypeName);
@@ -296,6 +320,16 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
             foreach (var p in FlattenElements(graph, child, options, enclosingTypeName))
                 yield return p;
         }
+    }
+
+    private static PropSpec AnyProp(Particle particle, string enclosingTypeName)
+    {
+        TypeSyntax typeSyntax = particle.IsCollection
+            ? ParseTypeName("Collection<System.Xml.XmlElement>")
+            : ParseTypeName("System.Xml.XmlElement");
+
+        var xmlAny = AttributeList(SingletonSeparatedList(Attribute(IdentifierName("XmlAnyElement"))));
+        return new PropSpec(SanitizeProp("Any", enclosingTypeName), typeSyntax, [xmlAny]);
     }
 
     private static PropSpec ElementProp(
@@ -329,11 +363,37 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
                     LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(particle.ElementNamespace!)))));
         }
 
+        if (TryXmlDataTypeForBuiltin(particle.TypeId) is { } dataType)
+        {
+            args.Add(AttributeArgument(
+                AssignmentExpression(
+                    SyntaxKind.SimpleAssignmentExpression,
+                    IdentifierName("DataType"),
+                    LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(dataType)))));
+        }
+
         var xmlEl = AttributeList(SingletonSeparatedList(
             Attribute(IdentifierName("XmlElement"))
                 .WithArgumentList(AttributeArgumentList(SeparatedList(args)))));
 
         return new PropSpec(SanitizeProp(name, enclosingTypeName), typeSyntax, [xmlEl]);
+    }
+
+    private static string? TryXmlDataTypeForBuiltin(SchemaTypeId? typeId)
+    {
+        if (typeId is null || typeId.Value.NamespaceName != "http://www.w3.org/2001/XMLSchema")
+            return null;
+
+        return typeId.Value.LocalName switch
+        {
+            "date" => "date",
+            "time" => "time",
+            "dateTime" => "dateTime",
+            "base64Binary" => "base64Binary",
+            "hexBinary" => "hexBinary",
+            "duration" => "duration",
+            _ => null
+        };
     }
 
     private static string ResolveClrType(SchemaGraph graph, SchemaTypeId? typeId, EmitOptions options)

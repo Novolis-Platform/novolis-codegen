@@ -194,7 +194,7 @@ public sealed class SchemaSetLoaderAndCoverageTests
         await Assert.That(SchemaNamespaceMapper.Map(root, "http://uri.etsi.org/01903/v1.3.2#"))
             .IsEqualTo(root + ".Xades");
         await Assert.That(SchemaNamespaceMapper.Map(root, "http://www.unece.org/cefact/namespaces/StandardBusinessDocumentHeader"))
-            .IsEqualTo(root + ".Envelope");
+            .IsEqualTo(root);
         await Assert.That(SchemaNamespaceMapper.Map(root, "___"))
             .IsEqualTo(root + ".Generated");
         await Assert.That(SchemaNamespaceMapper.Map(root, "urn:novolis:codegen:tiny"))

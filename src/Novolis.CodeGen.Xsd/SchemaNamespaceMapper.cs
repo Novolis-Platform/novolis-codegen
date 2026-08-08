@@ -38,7 +38,8 @@ public static class SchemaNamespaceMapper
         if (customNamespace == "urn_un_unece_uncefact_data_specification_CoreComponentTypeSchemaModule_2") return "CoreComponentTypes";
         if (customNamespace.StartsWith("http___www_w3_org_2000_09_xmldsig", StringComparison.Ordinal)) return "XmlDsig";
         if (customNamespace.StartsWith("http___uri_etsi_org_01903_", StringComparison.Ordinal)) return "Xades";
-        if (customNamespace.Contains("StandardBusinessDocumentHeader", StringComparison.Ordinal)) return "Envelope";
+        // SBDH / Peppol envelope types live at the package root (Novolis.Xsd.Peppol), not .Envelope.
+        if (customNamespace.Contains("StandardBusinessDocumentHeader", StringComparison.Ordinal)) return string.Empty;
 
         // Synthetic / fixture namespaces: last segment after colon or slash
         var last = customNamespace.Split('_', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();

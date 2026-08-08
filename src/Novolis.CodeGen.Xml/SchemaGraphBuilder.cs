@@ -143,7 +143,7 @@ public static class SchemaGraphBuilder
             : (SchemaTypeId?)null;
 
         var binary = DetectBinaryFacet(ct);
-        var (hasSimple, simpleClr) = DetectSimpleContent(ct, binary);
+        var (hasSimple, simpleClr, xmlDataType) = DetectSimpleContent(ct, binary);
         complex[id] = new ComplexTypeNode(
             id,
             SanitizeName(id.LocalName),
@@ -153,20 +153,40 @@ public static class SchemaGraphBuilder
             ct.IsAbstract,
             binary,
             hasSimple,
-            simpleClr);
+            simpleClr,
+            xmlDataType);
     }
 
-    private static (bool HasSimple, string? Clr) DetectSimpleContent(XmlSchemaComplexType ct, BinaryFacet binary)
+    private static (bool HasSimple, string? Clr, string? XmlDataType) DetectSimpleContent(
+        XmlSchemaComplexType ct,
+        BinaryFacet binary)
     {
         if (ct.ContentType is XmlSchemaContentType.TextOnly or XmlSchemaContentType.Mixed)
         {
             if (binary is BinaryFacet.Base64Binary or BinaryFacet.BinaryObject)
-                return (true, "byte[]");
-            return (true, MapTypeCode(ct.Datatype?.TypeCode));
+                return (true, "byte[]", MapXmlDataType(ct.Datatype?.TypeCode) ?? "base64Binary");
+            return (true, MapTypeCode(ct.Datatype?.TypeCode), MapXmlDataType(ct.Datatype?.TypeCode));
         }
 
-        return (false, null);
+        return (false, null, null);
     }
+
+    private static string? MapXmlDataType(XmlTypeCode? code) =>
+        code switch
+        {
+            XmlTypeCode.Date => "date",
+            XmlTypeCode.Time => "time",
+            XmlTypeCode.DateTime => "dateTime",
+            XmlTypeCode.Base64Binary => "base64Binary",
+            XmlTypeCode.HexBinary => "hexBinary",
+            XmlTypeCode.Duration => "duration",
+            XmlTypeCode.GYear => "gYear",
+            XmlTypeCode.GYearMonth => "gYearMonth",
+            XmlTypeCode.GMonth => "gMonth",
+            XmlTypeCode.GMonthDay => "gMonthDay",
+            XmlTypeCode.GDay => "gDay",
+            _ => null
+        };
 
     private static string MapTypeCode(XmlTypeCode? code) =>
         code is { } c && ClrByTypeCode.TryGetValue(c, out var clr) ? clr : "string";
@@ -277,6 +297,7 @@ public static class SchemaGraphBuilder
         return particle switch
         {
             XmlSchemaElement el => MapElementParticle(el, referenced),
+            XmlSchemaAny any => MapAnyParticle(any),
             XmlSchemaSequence seq => MapGroup(ParticleKind.Sequence, seq, referenced),
             XmlSchemaChoice choice => MapGroup(ParticleKind.Choice, choice, referenced),
             XmlSchemaAll all => MapGroup(ParticleKind.All, all, referenced),
@@ -284,6 +305,12 @@ public static class SchemaGraphBuilder
             XmlSchemaGroupRef groupRef => MapParticle(groupRef.Particle, referenced),
             _ => null
         };
+    }
+
+    private static Particle MapAnyParticle(XmlSchemaAny any)
+    {
+        var max = any.MaxOccursString == "unbounded" ? decimal.MaxValue : any.MaxOccurs;
+        return new Particle(ParticleKind.Any, any.MinOccurs, max);
     }
 
     private static Particle MapElementParticle(XmlSchemaElement el, HashSet<XmlQualifiedName> referenced)

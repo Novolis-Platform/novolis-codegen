@@ -189,6 +189,15 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
         EmitOptions options,
         IReadOnlyDictionary<SchemaTypeId, string> rootLocalByType)
     {
+        if (particle.Kind == ParticleKind.Any)
+        {
+            var anyType = particle.IsCollection
+                ? "IReadOnlyList<string>"
+                : "string?";
+            yield return new PropSpec(Sanitize(particle.ElementName ?? "Any"), anyType, particle.MinOccurs == 0);
+            yield break;
+        }
+
         if (particle.Kind == ParticleKind.Element)
         {
             var resolved = ResolvePropertyType(

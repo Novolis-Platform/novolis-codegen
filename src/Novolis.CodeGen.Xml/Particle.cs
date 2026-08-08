@@ -13,7 +13,10 @@ public enum ParticleKind
     All,
 
     /// <summary>Element reference particle.</summary>
-    Element
+    Element,
+
+    /// <summary>Wildcard <c>xs:any</c> particle.</summary>
+    Any
 }
 
 /// <summary>Immutable particle node in a complex type content model.</summary>
