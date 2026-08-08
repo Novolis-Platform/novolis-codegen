@@ -64,13 +64,13 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
         {
             files.Add(new EmittedFile(
                 $"{ifaceName}.g.cs",
-                BuildEmptyInterface(options.RootNamespace, ifaceName)));
+                BuildEmptyInterface(options.RootNamespace, ifaceName, options)));
         }
 
         foreach (var type in simple)
         {
             var ns = options.NamespaceMapper.Map(options.RootNamespace, type.Id.NamespaceName);
-            var cu = BuildSimpleType(type, ns);
+            var cu = BuildSimpleType(type, ns, options);
             files.Add(new EmittedFile($"{SafePath(ns, type.CSharpName)}.g.cs", cu));
         }
 
@@ -97,18 +97,18 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
         return Path.Combine(leaf, typeName);
     }
 
-    private static CompilationUnitSyntax BuildEmptyInterface(string ns, string name)
+    private static CompilationUnitSyntax BuildEmptyInterface(string ns, string name, EmitOptions options)
     {
         var iface = InterfaceDeclaration(name)
             .AddModifiers(Token(SyntaxKind.PublicKeyword));
 
-        return CompilationUnit()
+        var cu = CompilationUnit()
             .AddUsings(UsingDirective(ParseName("System")))
-            .AddMembers(FileScopedNamespaceDeclaration(ParseName(ns)).AddMembers(iface))
-            .NormalizeWhitespace();
+            .AddMembers(FileScopedNamespaceDeclaration(ParseName(ns)).AddMembers(iface));
+        return WithNullable(cu, options).NormalizeWhitespace();
     }
 
-    private static CompilationUnitSyntax BuildSimpleType(SimpleTypeNode type, string ns)
+    private static CompilationUnitSyntax BuildSimpleType(SimpleTypeNode type, string ns, EmitOptions options)
     {
         var clr = type.ClrTypeName;
         var prop = PropertyDeclaration(ParseTypeName(clr), "Value")
@@ -125,12 +125,12 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
             .AddAttributeLists(XmlTypeAttributeList(type.Id.LocalName, type.Id.NamespaceName))
             .AddMembers(prop);
 
-        return CompilationUnit()
+        var cu = CompilationUnit()
             .AddUsings(
                 UsingDirective(ParseName("System")),
                 UsingDirective(ParseName("System.Xml.Serialization")))
-            .AddMembers(FileScopedNamespaceDeclaration(ParseName(ns)).AddMembers(cls))
-            .NormalizeWhitespace();
+            .AddMembers(FileScopedNamespaceDeclaration(ParseName(ns)).AddMembers(cls));
+        return WithNullable(cu, options).NormalizeWhitespace();
     }
 
     private static CompilationUnitSyntax BuildComplexType(
@@ -199,16 +199,19 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
                 .WithMembers(List(classMembers)),
             type.Documentation);
 
-        return CompilationUnit()
+        var cu = CompilationUnit()
             .AddUsings(
                 UsingDirective(ParseName("System")),
                 UsingDirective(ParseName("System.Collections.Generic")),
                 UsingDirective(ParseName("System.Collections.ObjectModel")),
                 UsingDirective(ParseName("System.Xml")),
                 UsingDirective(ParseName("System.Xml.Serialization")))
-            .AddMembers(FileScopedNamespaceDeclaration(ParseName(ns)).AddMembers(iface, cls))
-            .NormalizeWhitespace();
+            .AddMembers(FileScopedNamespaceDeclaration(ParseName(ns)).AddMembers(iface, cls));
+        return WithNullable(cu, options).NormalizeWhitespace();
     }
+
+    private static CompilationUnitSyntax WithNullable(CompilationUnitSyntax cu, EmitOptions options) =>
+        options.EnableNullable ? cu.WithLeadingTrivia(EmitNullability.EnableDirective()) : cu;
 
     private static PropSpec[] DeduplicatePropertyNames(PropSpec[] properties, string enclosingTypeName)
     {
@@ -269,6 +272,7 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
         foreach (var attr in type.Attributes)
         {
             var clr = ResolveClrType(graph, attr.TypeId, options);
+            var optional = options.EnableNullable && !attr.IsRequired;
             var xmlAttr = AttributeList(SingletonSeparatedList(
                 Attribute(IdentifierName("XmlAttribute"))
                     .WithArgumentList(AttributeArgumentList(SingletonSeparatedList(
@@ -276,7 +280,7 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
                             LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(attr.Name))))))));
             yield return new PropSpec(
                 SanitizeProp(attr.Name, enclosingTypeName),
-                ParseTypeName(clr),
+                EmitNullability.ParseAnnotated(clr, optional, collection: false),
                 [xmlAttr],
                 attr.Documentation);
         }
@@ -306,7 +310,7 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
 
         if (type.Particle is { } particle)
         {
-            foreach (var prop in FlattenElements(graph, particle, options, enclosingTypeName))
+            foreach (var prop in FlattenElements(graph, particle, options, enclosingTypeName, ancestorOptional: false, inChoice: false))
                 yield return prop;
         }
     }
@@ -315,32 +319,38 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
         SchemaGraph graph,
         Particle particle,
         EmitOptions options,
-        string enclosingTypeName)
+        string enclosingTypeName,
+        bool ancestorOptional,
+        bool inChoice)
     {
+        var optionalHere = ancestorOptional || particle.MinOccurs == 0;
+
         if (particle.Kind == ParticleKind.Any)
         {
-            yield return AnyProp(particle, enclosingTypeName);
+            yield return AnyProp(particle, enclosingTypeName, options, optionalHere || inChoice);
             yield break;
         }
 
         if (particle.Kind == ParticleKind.Element)
         {
-            yield return ElementProp(graph, particle, options, enclosingTypeName);
+            yield return ElementProp(graph, particle, options, enclosingTypeName, optionalHere || inChoice);
             yield break;
         }
 
+        var childInChoice = inChoice || particle.Kind == ParticleKind.Choice;
         foreach (var child in particle.Children)
         {
-            foreach (var p in FlattenElements(graph, child, options, enclosingTypeName))
+            foreach (var p in FlattenElements(graph, child, options, enclosingTypeName, optionalHere, childInChoice))
                 yield return p;
         }
     }
 
-    private static PropSpec AnyProp(Particle particle, string enclosingTypeName)
+    private static PropSpec AnyProp(Particle particle, string enclosingTypeName, EmitOptions options, bool optional)
     {
+        var annotate = options.EnableNullable && optional;
         TypeSyntax typeSyntax = particle.IsCollection
-            ? ParseTypeName("Collection<System.Xml.XmlElement>")
-            : ParseTypeName("System.Xml.XmlElement");
+            ? EmitNullability.ParseAnnotated("System.Xml.XmlElement", annotate, collection: true, options.CollectionTypeName)
+            : EmitNullability.ParseAnnotated("System.Xml.XmlElement", annotate, collection: false);
 
         var xmlAny = AttributeList(SingletonSeparatedList(Attribute(IdentifierName("XmlAnyElement"))));
         return new PropSpec(
@@ -354,19 +364,17 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
         SchemaGraph graph,
         Particle particle,
         EmitOptions options,
-        string enclosingTypeName)
+        string enclosingTypeName,
+        bool optional)
     {
         var name = particle.ElementName ?? "Item";
         var clr = ResolveClrType(graph, particle.TypeId, options);
-        TypeSyntax typeSyntax;
-        if (particle.IsCollection)
-        {
-            typeSyntax = ParseTypeName($"Collection<{clr}>");
-        }
-        else
-        {
-            typeSyntax = ParseTypeName(clr);
-        }
+        var annotate = options.EnableNullable && optional;
+        var typeSyntax = EmitNullability.ParseAnnotated(
+            clr,
+            annotate,
+            particle.IsCollection,
+            options.CollectionTypeName);
 
         var args = new List<AttributeArgumentSyntax>
         {

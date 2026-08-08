@@ -50,12 +50,13 @@ public sealed class LeanRecordsProfile : IEmitProfile
             var clr = Resolve(graph, attr.TypeId);
             if (clr == "byte[]")
                 continue;
+            var optional = options.EnableNullable && !attr.IsRequired;
             parameters.Add(Parameter(Identifier(Sanitize(attr.Name)))
-                .WithType(ParseTypeName(clr)));
+                .WithType(ParseTypeName(EmitNullability.Annotate(clr, optional, collection: false))));
         }
 
         if (type.Particle is { } particle)
-            CollectElements(graph, particle, parameters);
+            CollectElements(graph, particle, parameters, options, ancestorOptional: false, inChoice: false);
 
         var record = RecordDeclaration(Token(SyntaxKind.RecordKeyword), type.CSharpName)
             .AddModifiers(Token(SyntaxKind.PublicKeyword))
@@ -65,35 +66,51 @@ public sealed class LeanRecordsProfile : IEmitProfile
         var ns = FileScopedNamespaceDeclaration(ParseName(options.RootNamespace))
             .AddMembers(record);
 
-        return CompilationUnit()
+        var cu = CompilationUnit()
             .WithUsings(List(new[]
             {
                 UsingDirective(ParseName("System")),
                 UsingDirective(ParseName("System.Collections.Generic"))
             }))
-            .AddMembers(ns)
-            .NormalizeWhitespace();
+            .AddMembers(ns);
+        return options.EnableNullable
+            ? cu.WithLeadingTrivia(EmitNullability.EnableDirective()).NormalizeWhitespace()
+            : cu.NormalizeWhitespace();
     }
 
-    private static void CollectElements(SchemaGraph graph, Particle particle, List<ParameterSyntax> parameters)
+    private static void CollectElements(
+        SchemaGraph graph,
+        Particle particle,
+        List<ParameterSyntax> parameters,
+        EmitOptions options,
+        bool ancestorOptional,
+        bool inChoice)
     {
+        var optionalHere = ancestorOptional || particle.MinOccurs == 0;
+
         if (particle.Kind == ParticleKind.Element)
         {
             var clr = Resolve(graph, particle.TypeId);
             if (clr == "byte[]")
                 return;
-            if (particle.IsCollection)
-                clr = $"IReadOnlyList<{clr}>";
-            else if (particle.MinOccurs == 0)
-                clr += "?";
+            var optional = options.EnableNullable && (optionalHere || inChoice);
+            clr = EmitNullability.Annotate(
+                clr,
+                optional,
+                particle.IsCollection,
+                "System.Collections.Generic.IReadOnlyList");
 
             parameters.Add(Parameter(Identifier(Sanitize(particle.ElementName ?? "Item")))
                 .WithType(ParseTypeName(clr)));
             return;
         }
 
-        foreach (var child in particle.Children)
-            CollectElements(graph, child, parameters);
+        if (particle.Kind is ParticleKind.Sequence or ParticleKind.Choice or ParticleKind.All)
+        {
+            var childInChoice = inChoice || particle.Kind == ParticleKind.Choice;
+            foreach (var child in particle.Children)
+                CollectElements(graph, child, parameters, options, optionalHere, childInChoice);
+        }
     }
 
     private static string Resolve(SchemaGraph graph, SchemaTypeId? typeId)

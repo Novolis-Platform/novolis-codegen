@@ -68,7 +68,7 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
 
         var files = new List<EmittedFile>
         {
-            new("BinaryObjectRef.g.cs", BuildBinaryObjectRef(options.RootNamespace))
+            new("BinaryObjectRef.g.cs", BuildBinaryObjectRef(options.RootNamespace, options))
         };
 
         var propsByType = new Dictionary<SchemaTypeId, PropSpec[]>();
@@ -94,7 +94,7 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
             {
                 spineProps = ComputeIntersection(spineDocTypes.Select(t => propsByType[t.Id]).ToArray());
                 files.Add(new EmittedFile($"{spineName}.g.cs",
-                    BuildSpineInterface(options.RootNamespace, spineName!, spineProps)));
+                    BuildSpineInterface(options.RootNamespace, spineName!, spineProps, options)));
             }
         }
 
@@ -117,7 +117,8 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
                 ifaceName,
                 props,
                 extendSpine ? spineName : null,
-                extendSpine ? spineProps : null);
+                extendSpine ? spineProps : null,
+                options);
             files.Add(new EmittedFile($"{typeName}.g.cs", cu));
         }
 
@@ -170,10 +171,11 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
     {
         foreach (var attr in type.Attributes)
         {
-            var resolved = ResolvePropertyType(graph, attr.TypeId, options, rootLocalByType, collection: false, optional: !attr.IsRequired);
+            var optional = options.EnableNullable && !attr.IsRequired;
+            var resolved = ResolvePropertyType(graph, attr.TypeId, options, rootLocalByType, collection: false, optional: optional);
             if (resolved is null)
                 continue;
-            yield return new PropSpec(Sanitize(attr.Name), resolved, !attr.IsRequired);
+            yield return new PropSpec(Sanitize(attr.Name), resolved, optional);
         }
 
         if (type.HasSimpleContent || type.BinaryFacet != BinaryFacet.None)
@@ -183,7 +185,7 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
             if (clr == "byte[]")
             {
                 if (options.StripEmbeddedPolicy != StripEmbeddedPolicy.Omit)
-                    yield return new PropSpec("Value", "BinaryObjectRef", IsOptional: true);
+                    yield return new PropSpec("Value", options.EnableNullable ? "BinaryObjectRef?" : "BinaryObjectRef", IsOptional: true);
             }
             else
             {
@@ -193,7 +195,7 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
 
         if (type.Particle is { } particle)
         {
-            foreach (var p in FlattenElements(graph, particle, options, rootLocalByType))
+            foreach (var p in FlattenElements(graph, particle, options, rootLocalByType, ancestorOptional: false, inChoice: false))
                 yield return p;
         }
     }
@@ -202,34 +204,41 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
         SchemaGraph graph,
         Particle particle,
         EmitOptions options,
-        IReadOnlyDictionary<SchemaTypeId, string> rootLocalByType)
+        IReadOnlyDictionary<SchemaTypeId, string> rootLocalByType,
+        bool ancestorOptional,
+        bool inChoice)
     {
+        var optionalHere = ancestorOptional || particle.MinOccurs == 0;
+
         if (particle.Kind == ParticleKind.Any)
         {
+            var optional = options.EnableNullable && (optionalHere || inChoice);
             var anyType = particle.IsCollection
-                ? "IReadOnlyList<string>"
-                : "string?";
-            yield return new PropSpec(Sanitize(particle.ElementName ?? "Any"), anyType, particle.MinOccurs == 0);
+                ? EmitNullability.Annotate("string", optional, collection: true, "System.Collections.Generic.IReadOnlyList")
+                : EmitNullability.Annotate("string", optional, collection: false);
+            yield return new PropSpec(Sanitize(particle.ElementName ?? "Any"), anyType, optional);
             yield break;
         }
 
         if (particle.Kind == ParticleKind.Element)
         {
+            var optional = options.EnableNullable && (optionalHere || inChoice);
             var resolved = ResolvePropertyType(
                 graph,
                 particle.TypeId,
                 options,
                 rootLocalByType,
                 collection: particle.IsCollection,
-                optional: particle.MinOccurs == 0 && !particle.IsCollection);
+                optional: optional);
             if (resolved is not null)
-                yield return new PropSpec(Sanitize(particle.ElementName ?? "Item"), resolved, particle.MinOccurs == 0 && !particle.IsCollection);
+                yield return new PropSpec(Sanitize(particle.ElementName ?? "Item"), resolved, optional);
             yield break;
         }
 
+        var childInChoice = inChoice || particle.Kind == ParticleKind.Choice;
         foreach (var child in particle.Children)
         {
-            foreach (var p in FlattenElements(graph, child, options, rootLocalByType))
+            foreach (var p in FlattenElements(graph, child, options, rootLocalByType, optionalHere, childInChoice))
                 yield return p;
         }
     }
@@ -301,16 +310,8 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
     private static string MapXsdBuiltin(string local) =>
         XsdBuiltins.TryGetValue(local, out var clr) ? clr : "string";
 
-    private static string Wrap(string clr, bool collection, bool optional)
-    {
-        if (collection)
-            return $"IReadOnlyList<{clr}>";
-        if (optional && clr is not "string" and not "byte[]")
-            return clr + "?";
-        if (optional && clr == "string")
-            return "string?";
-        return clr;
-    }
+    private static string Wrap(string clr, bool collection, bool optional) =>
+        EmitNullability.Annotate(clr, optional, collection, "System.Collections.Generic.IReadOnlyList");
 
     private static PropSpec[] Deduplicate(PropSpec[] props, string enclosingName)
     {
@@ -359,7 +360,7 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
         return first.Values.OrderBy(p => p.Name, StringComparer.Ordinal).ToArray();
     }
 
-    private static CompilationUnitSyntax BuildBinaryObjectRef(string ns)
+    private static CompilationUnitSyntax BuildBinaryObjectRef(string ns, EmitOptions options)
     {
         var parameters = new[]
         {
@@ -376,18 +377,17 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
             .WithParameterList(ParameterList(SeparatedList(parameters)))
             .WithSemicolonToken(Token(SyntaxKind.SemicolonToken));
 
-        return CompilationUnit()
+        var cu = CompilationUnit()
             .WithUsings(List(new[]
             {
                 UsingDirective(ParseName("System"))
             }))
             .WithMembers(SingletonList<MemberDeclarationSyntax>(
-                FileScopedNamespaceDeclaration(ParseName(ns)).AddMembers(record)))
-            .WithLeadingTrivia(NullableEnable())
-            .NormalizeWhitespace();
+                FileScopedNamespaceDeclaration(ParseName(ns)).AddMembers(record)));
+        return WithNullable(cu, options).NormalizeWhitespace();
     }
 
-    private static CompilationUnitSyntax BuildSpineInterface(string ns, string name, PropSpec[] props)
+    private static CompilationUnitSyntax BuildSpineInterface(string ns, string name, PropSpec[] props, EmitOptions options)
     {
         var members = props
             .Select(p => (MemberDeclarationSyntax)PropertyDeclaration(ParseTypeName(p.TypeName), p.Name)
@@ -401,13 +401,12 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
             .AddModifiers(Token(SyntaxKind.PublicKeyword))
             .WithMembers(List(members));
 
-        return CompilationUnit()
+        var cu = CompilationUnit()
             .AddUsings(
                 UsingDirective(ParseName("System")),
                 UsingDirective(ParseName("System.Collections.Generic")))
-            .AddMembers(FileScopedNamespaceDeclaration(ParseName(ns)).AddMembers(iface))
-            .WithLeadingTrivia(NullableEnable())
-            .NormalizeWhitespace();
+            .AddMembers(FileScopedNamespaceDeclaration(ParseName(ns)).AddMembers(iface));
+        return WithNullable(cu, options).NormalizeWhitespace();
     }
 
     private static CompilationUnitSyntax BuildTypeUnit(
@@ -416,7 +415,8 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
         string ifaceName,
         PropSpec[] props,
         string? spineInterface,
-        PropSpec[]? spineProps)
+        PropSpec[]? spineProps,
+        EmitOptions options)
     {
         var spineNames = spineProps?.Select(p => p.Name).ToHashSet(StringComparer.Ordinal)
                          ?? new HashSet<string>(StringComparer.Ordinal);
@@ -453,20 +453,16 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
             .WithParameterList(ParameterList(SeparatedList(parameters)))
             .WithSemicolonToken(Token(SyntaxKind.SemicolonToken));
 
-        return CompilationUnit()
+        var cu = CompilationUnit()
             .AddUsings(
                 UsingDirective(ParseName("System")),
                 UsingDirective(ParseName("System.Collections.Generic")))
-            .AddMembers(FileScopedNamespaceDeclaration(ParseName(ns)).AddMembers(iface, record))
-            .WithLeadingTrivia(NullableEnable())
-            .NormalizeWhitespace();
+            .AddMembers(FileScopedNamespaceDeclaration(ParseName(ns)).AddMembers(iface, record));
+        return WithNullable(cu, options).NormalizeWhitespace();
     }
 
-    private static SyntaxTriviaList NullableEnable() =>
-        TriviaList(
-            Trivia(NullableDirectiveTrivia(Token(SyntaxKind.EnableKeyword), true)),
-            EndOfLine("\n"));
-
+    private static CompilationUnitSyntax WithNullable(CompilationUnitSyntax cu, EmitOptions options) =>
+        options.EnableNullable ? cu.WithLeadingTrivia(EmitNullability.EnableDirective()) : cu;
     private static string Sanitize(string name)
     {
         if (string.IsNullOrEmpty(name))

@@ -585,12 +585,18 @@ public sealed class EmitProfileBranchCoverageTests
         var text = SyntaxEmitWriter.Format(result.Files[0].CompilationUnit);
         await Assert.That(text.Contains("BinaryObjectRef") || text.StartsWith("#nullable", StringComparison.Ordinal)).IsTrue();
 
-        // Wire CU has no nullable trivia → Format false branch
+        // Wire CU emits #nullable enable by default
         var wire = new WireXmlSerializerProfile().Emit(
             SchemaGraphBuilder.BuildFromFiles([Path.Combine(FixturesDir, "tiny.xsd")]),
             new EmitOptions { RootNamespace = "Tiny.Fmt" });
         var wireText = SyntaxEmitWriter.Format(wire.Files[0].CompilationUnit);
-        await Assert.That(wireText.StartsWith("#nullable", StringComparison.Ordinal)).IsFalse();
+        await Assert.That(wireText.StartsWith("#nullable", StringComparison.Ordinal)).IsTrue();
+
+        var wireOff = new WireXmlSerializerProfile().Emit(
+            SchemaGraphBuilder.BuildFromFiles([Path.Combine(FixturesDir, "tiny.xsd")]),
+            new EmitOptions { RootNamespace = "Tiny.FmtOff", EnableNullable = false });
+        var wireOffText = SyntaxEmitWriter.Format(wireOff.Files[0].CompilationUnit);
+        await Assert.That(wireOffText.StartsWith("#nullable", StringComparison.Ordinal)).IsFalse();
     }
 
     [Test]

@@ -22,14 +22,9 @@ var result = XsdCodegen.EmitFromDirectory(
     new EmitOptions
     {
         RootNamespace = "Acme.Schemas",
-        // DefaultNamespaceMapper is schema-agnostic; inject your own for product suffixes.
         NamespaceMapper = new DefaultNamespaceMapper(),
         DocumentRootInterfaceName = "IDocument",
-        Hooks =
-        [
-            // Post-emit: records↔classes, extra base types, renames, …
-            // new MyEmitHook()
-        ]
+        EnableNullable = true, // default: #nullable enable + ? on optional / choice particles
     });
 ```
 
@@ -37,6 +32,7 @@ var result = XsdCodegen.EmitFromDirectory(
 
 | Option | Role |
 |--------|------|
+| `EnableNullable` | `#nullable enable` + `?` on optional attributes/elements (default **true**) |
 | `NamespaceMapper` | XML URI → C# namespace (default: last URI segment) |
 | `DocumentRootInterfaceName` | Shared interface on Wire document roots |
 | `SpineInterfaceName` + `SpineDocumentRootNames` | Shared Base spine over named document roots |

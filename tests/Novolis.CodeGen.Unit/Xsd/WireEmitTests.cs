@@ -14,6 +14,23 @@ public sealed class WireEmitTests
         Path.Combine(AppContext.BaseDirectory, "Fixtures", "Schemas");
 
     [Test]
+    public async Task Wire_OptionalParticles_AreNullableAnnotated()
+    {
+        var (result, _) = EmitTiny();
+        var line = result.Files.Single(f => f.RelativePath.Contains("LineType", StringComparison.Ordinal));
+        var text = SyntaxEmitWriter.Format(line.CompilationUnit);
+        await Assert.That(text.StartsWith("#nullable", StringComparison.Ordinal)).IsTrue();
+        await Assert.That(text.Contains("decimal?")).IsTrue();
+        await Assert.That(text.Contains("BinaryObjectType?")).IsTrue();
+
+        var doc = result.Files.Single(f => f.RelativePath.Contains("DocumentType", StringComparison.Ordinal));
+        var docText = SyntaxEmitWriter.Format(doc.CompilationUnit);
+        // Choice alternatives under minOccurs=0 are optional
+        await Assert.That(docText.Contains("BinaryPayloadType?")).IsTrue();
+        await Assert.That(docText.Contains("string? Comment") || docText.Contains("Comment")).IsTrue();
+    }
+
+    [Test]
     public async Task EmitCompiles_AgainstNetRefs()
     {
         var (result, _) = EmitTiny();
@@ -147,6 +164,7 @@ public sealed class WireEmitTests
             "TinyWireEmit",
             trees,
             refs,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+                .WithNullableContextOptions(NullableContextOptions.Enable));
     }
 }

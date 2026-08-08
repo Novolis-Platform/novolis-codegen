@@ -63,6 +63,12 @@ public sealed class EmitOptions
 
     /// <summary>Optional post-emit hooks applied by <see cref="XsdCodegen.Emit"/>.</summary>
     public IReadOnlyList<IXsdEmitHook>? Hooks { get; init; }
+
+    /// <summary>
+    /// When true (default), files start with <c>#nullable enable</c> and optional particles/attributes
+    /// are annotated with <c>?</c> (including choice alternatives and optional collections).
+    /// </summary>
+    public bool EnableNullable { get; init; } = true;
 }
 
 /// <summary>How binary embeddings are handled in Base/Lean emit.</summary>
