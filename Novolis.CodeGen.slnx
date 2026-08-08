@@ -6,6 +6,8 @@
     <Project Path="src/Novolis.CodeGen.Pipeline/Novolis.CodeGen.Pipeline.csproj" />
     <Project Path="src/Novolis.CodeGen.Bindings/Novolis.CodeGen.Bindings.csproj" />
     <Project Path="src/Novolis.CodeGen.Bindings.Roslyn/Novolis.CodeGen.Bindings.Roslyn.csproj" />
+    <Project Path="src/Novolis.CodeGen.Xml/Novolis.CodeGen.Xml.csproj" />
+    <Project Path="src/Novolis.CodeGen.Xsd/Novolis.CodeGen.Xsd.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Novolis.CodeGen.Unit/Novolis.CodeGen.Unit.csproj" />

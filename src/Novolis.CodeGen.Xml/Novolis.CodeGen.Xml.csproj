@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>Novolis.CodeGen.Xml</PackageId>
+    <Description>XmlSchemaSet loading and SchemaGraph IR for XSD-driven code generation.</Description>
+    <IsPackable>true</IsPackable>
+    <RootNamespace>Novolis.CodeGen.Xml</RootNamespace>
+    <PackageTags>xsd;xml;schema;codegen;novolis</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+</Project>

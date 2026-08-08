@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:tns="urn:novolis:codegen:billing"
+           targetNamespace="urn:novolis:codegen:billing"
+           elementFormDefault="qualified">
+
+  <xs:complexType name="BinaryObjectType">
+    <xs:simpleContent>
+      <xs:extension base="xs:base64Binary">
+        <xs:attribute name="mimeCode" type="xs:string" use="optional"/>
+        <xs:attribute name="filename" type="xs:string" use="optional"/>
+        <xs:attribute name="uri" type="xs:string" use="optional"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="AttachmentType">
+    <xs:sequence>
+      <xs:element name="EmbeddedDocumentBinaryObject" type="tns:BinaryObjectType" minOccurs="0"/>
+      <xs:element name="ExternalUri" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PartyType">
+    <xs:sequence>
+      <xs:element name="Name" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="InvoiceType">
+    <xs:sequence>
+      <xs:element name="ID" type="xs:string"/>
+      <xs:element name="IssueDate" type="xs:date" minOccurs="0"/>
+      <xs:element name="DocumentCurrencyCode" type="xs:string"/>
+      <xs:element name="AccountingSupplierParty" type="tns:PartyType"/>
+      <xs:element name="AccountingCustomerParty" type="tns:PartyType"/>
+      <xs:element name="Note" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="Attachment" type="tns:AttachmentType" minOccurs="0"/>
+      <xs:element name="InvoiceTypeCode" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CreditNoteType">
+    <xs:sequence>
+      <xs:element name="ID" type="xs:string"/>
+      <xs:element name="IssueDate" type="xs:date" minOccurs="0"/>
+      <xs:element name="DocumentCurrencyCode" type="xs:string"/>
+      <xs:element name="AccountingSupplierParty" type="tns:PartyType"/>
+      <xs:element name="AccountingCustomerParty" type="tns:PartyType"/>
+      <xs:element name="Note" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="Attachment" type="tns:AttachmentType" minOccurs="0"/>
+      <xs:element name="CreditNoteTypeCode" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ReminderType">
+    <xs:sequence>
+      <xs:element name="ID" type="xs:string"/>
+      <xs:element name="IssueDate" type="xs:date" minOccurs="0"/>
+      <xs:element name="DocumentCurrencyCode" type="xs:string"/>
+      <xs:element name="AccountingSupplierParty" type="tns:PartyType"/>
+      <xs:element name="AccountingCustomerParty" type="tns:PartyType"/>
+      <xs:element name="Note" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="Attachment" type="tns:AttachmentType" minOccurs="0"/>
+      <xs:element name="ReminderTypeCode" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="Invoice" type="tns:InvoiceType"/>
+  <xs:element name="CreditNote" type="tns:CreditNoteType"/>
+  <xs:element name="Reminder" type="tns:ReminderType"/>
+</xs:schema>

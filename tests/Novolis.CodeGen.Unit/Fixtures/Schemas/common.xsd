@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:c="urn:novolis:codegen:common"
+           targetNamespace="urn:novolis:codegen:common"
+           elementFormDefault="qualified">
+  <xs:complexType name="SharedType">
+    <xs:sequence>
+      <xs:element name="Code" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

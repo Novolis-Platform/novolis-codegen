@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:c="urn:novolis:codegen:common"
+           xmlns:a="urn:novolis:codegen:a"
+           targetNamespace="urn:novolis:codegen:a"
+           elementFormDefault="qualified">
+  <xs:import namespace="urn:novolis:codegen:common" schemaLocation="common.xsd"/>
+  <xs:complexType name="AType">
+    <xs:sequence>
+      <xs:element name="Shared" type="c:SharedType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="A" type="a:AType"/>
+</xs:schema>

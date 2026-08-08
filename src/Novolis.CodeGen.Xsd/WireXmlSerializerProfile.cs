@@ -1,0 +1,375 @@
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Novolis.CodeGen.Xml;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
+
+namespace Novolis.CodeGen.Xsd;
+
+/// <summary>Emits XmlSerializer-friendly partial classes + interfaces from a SchemaGraph.</summary>
+public sealed class WireXmlSerializerProfile : IEmitProfile
+{
+    /// <inheritdoc />
+    public string Name => "WireXmlSerializer";
+
+    /// <inheritdoc />
+    public EmitResult Emit(SchemaGraph graph, EmitOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(graph);
+        ArgumentNullException.ThrowIfNull(options);
+
+        var include = options.IncludeTypeIds;
+        var complex = include is null
+            ? graph.ComplexTypes
+            : graph.ComplexTypes.Where(t => include.Contains(t.Id)).ToArray();
+        var simple = include is null
+            ? graph.SimpleTypes.Where(s => s.Id.NamespaceName != "http://www.w3.org/2001/XMLSchema").ToArray()
+            : graph.SimpleTypes.Where(s => include.Contains(s.Id)).ToArray();
+
+        var rootByType = graph.DocumentRoots
+            .Where(e => e.TypeId is not null)
+            .GroupBy(e => e.TypeId!.Value)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var files = new List<EmittedFile>();
+
+        if (options.DocumentRootInterfaceName is { } ifaceName)
+        {
+            files.Add(new EmittedFile(
+                $"{ifaceName}.g.cs",
+                BuildEmptyInterface(options.RootNamespace, ifaceName)));
+        }
+
+        foreach (var type in simple)
+        {
+            var ns = SchemaNamespaceMapper.Map(options.RootNamespace, type.Id.NamespaceName);
+            var cu = BuildSimpleType(type, ns);
+            files.Add(new EmittedFile($"{SafePath(ns, type.CSharpName)}.g.cs", cu));
+        }
+
+        foreach (var type in complex)
+        {
+            rootByType.TryGetValue(type.Id, out var rootEl);
+            var ns = SchemaNamespaceMapper.Map(options.RootNamespace, type.Id.NamespaceName);
+            var cu = BuildComplexType(graph, type, options, ns, rootEl);
+            files.Add(new EmittedFile($"{SafePath(ns, type.CSharpName)}.g.cs", cu));
+        }
+
+        return new EmitResult(files);
+    }
+
+    private static string SafePath(string ns, string typeName)
+    {
+        var leaf = ns.Contains('.') ? ns[(ns.LastIndexOf('.') + 1)..] : ns;
+        foreach (var c in Path.GetInvalidFileNameChars())
+        {
+            leaf = leaf.Replace(c, '_');
+            typeName = typeName.Replace(c, '_');
+        }
+
+        return Path.Combine(leaf, typeName);
+    }
+
+    private static CompilationUnitSyntax BuildEmptyInterface(string ns, string name)
+    {
+        var iface = InterfaceDeclaration(name)
+            .AddModifiers(Token(SyntaxKind.PublicKeyword));
+
+        return CompilationUnit()
+            .AddUsings(UsingDirective(ParseName("System")))
+            .AddMembers(FileScopedNamespaceDeclaration(ParseName(ns)).AddMembers(iface))
+            .NormalizeWhitespace();
+    }
+
+    private static CompilationUnitSyntax BuildSimpleType(SimpleTypeNode type, string ns)
+    {
+        var clr = type.ClrTypeName;
+        var prop = PropertyDeclaration(ParseTypeName(clr), "Value")
+            .AddModifiers(Token(SyntaxKind.PublicKeyword))
+            .AddAttributeLists(AttributeList(SingletonSeparatedList(Attribute(IdentifierName("XmlText")))))
+            .AddAccessorListAccessors(
+                AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
+                    .WithSemicolonToken(Token(SyntaxKind.SemicolonToken)),
+                AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
+                    .WithSemicolonToken(Token(SyntaxKind.SemicolonToken)));
+
+        var cls = ClassDeclaration(type.CSharpName)
+            .AddModifiers(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.PartialKeyword))
+            .AddAttributeLists(XmlTypeAttributeList(type.Id.LocalName, type.Id.NamespaceName))
+            .AddMembers(prop);
+
+        return CompilationUnit()
+            .AddUsings(
+                UsingDirective(ParseName("System")),
+                UsingDirective(ParseName("System.Xml.Serialization")))
+            .AddMembers(FileScopedNamespaceDeclaration(ParseName(ns)).AddMembers(cls))
+            .NormalizeWhitespace();
+    }
+
+    private static CompilationUnitSyntax BuildComplexType(
+        SchemaGraph graph,
+        ComplexTypeNode type,
+        EmitOptions options,
+        string ns,
+        ElementDecl? rootElement)
+    {
+        var className = type.CSharpName;
+        var ifaceName = "I" + className;
+        var properties = DeduplicatePropertyNames(BuildProperties(graph, type, options, className).ToArray(), className);
+
+        var ifaceMembers = properties
+            .Select(p => (MemberDeclarationSyntax)PropertyDeclaration(p.Type, p.Name)
+                .AddModifiers(Token(SyntaxKind.PublicKeyword))
+                .AddAccessorListAccessors(
+                    AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
+                        .WithSemicolonToken(Token(SyntaxKind.SemicolonToken)),
+                    AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
+                        .WithSemicolonToken(Token(SyntaxKind.SemicolonToken))))
+            .ToArray();
+
+        var iface = InterfaceDeclaration(ifaceName)
+            .AddModifiers(Token(SyntaxKind.PublicKeyword))
+            .WithMembers(List(ifaceMembers));
+
+        var classBases = new List<BaseTypeSyntax> { SimpleBaseType(IdentifierName(ifaceName)) };
+        if (rootElement is not null && options.DocumentRootInterfaceName is { } docIface)
+            classBases.Add(SimpleBaseType(ParseTypeName("global::" + options.RootNamespace + "." + docIface)));
+
+        var classAttrs = new List<AttributeListSyntax>
+        {
+            XmlTypeAttributeList(type.Id.LocalName, type.Id.NamespaceName)
+        };
+
+        if (rootElement is not null)
+            classAttrs.Add(XmlRootAttributeList(rootElement.Name, rootElement.NamespaceName));
+
+        var classMembers = new List<MemberDeclarationSyntax>();
+        foreach (var p in properties)
+        {
+            var prop = PropertyDeclaration(p.Type, p.Name)
+                .AddModifiers(Token(SyntaxKind.PublicKeyword))
+                .AddAccessorListAccessors(
+                    AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
+                        .WithSemicolonToken(Token(SyntaxKind.SemicolonToken)),
+                    AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
+                        .WithSemicolonToken(Token(SyntaxKind.SemicolonToken)));
+
+            if (p.XmlAttributes.Count > 0)
+                prop = prop.WithAttributeLists(List(p.XmlAttributes));
+
+            classMembers.Add(prop);
+        }
+
+        var cls = ClassDeclaration(className)
+            .AddModifiers(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.PartialKeyword))
+            .WithAttributeLists(List(classAttrs))
+            .WithBaseList(BaseList(SeparatedList(classBases)))
+            .WithMembers(List(classMembers));
+
+        return CompilationUnit()
+            .AddUsings(
+                UsingDirective(ParseName("System")),
+                UsingDirective(ParseName("System.Collections.Generic")),
+                UsingDirective(ParseName("System.Collections.ObjectModel")),
+                UsingDirective(ParseName("System.Xml.Serialization")))
+            .AddMembers(FileScopedNamespaceDeclaration(ParseName(ns)).AddMembers(iface, cls))
+            .NormalizeWhitespace();
+    }
+
+    private static PropSpec[] DeduplicatePropertyNames(PropSpec[] properties, string enclosingTypeName)
+    {
+        var used = new HashSet<string>(StringComparer.Ordinal) { enclosingTypeName };
+        var result = new PropSpec[properties.Length];
+        for (var i = 0; i < properties.Length; i++)
+        {
+            var p = properties[i];
+            var name = p.Name;
+            if (string.Equals(name, enclosingTypeName, StringComparison.Ordinal))
+                name += "Value";
+            var n = 2;
+            while (!used.Add(name))
+            {
+                name = p.Name + n;
+                n++;
+            }
+
+            result[i] = p with { Name = name };
+        }
+
+        return result;
+    }
+
+    private static AttributeListSyntax XmlTypeAttributeList(string localName, string namespaceName) =>
+        AttributeList(SingletonSeparatedList(
+            Attribute(IdentifierName("XmlType"), AttributeArgumentList(SeparatedList(new AttributeArgumentSyntax[]
+            {
+                AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(localName))),
+                NamespaceNamedArgument(namespaceName)
+            })))));
+
+    private static AttributeListSyntax XmlRootAttributeList(string localName, string namespaceName) =>
+        AttributeList(SingletonSeparatedList(
+            Attribute(IdentifierName("XmlRoot"), AttributeArgumentList(SeparatedList(new AttributeArgumentSyntax[]
+            {
+                AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(localName))),
+                NamespaceNamedArgument(namespaceName)
+            })))));
+
+    private static AttributeArgumentSyntax NamespaceNamedArgument(string namespaceName) =>
+        AttributeArgument(
+            AssignmentExpression(
+                SyntaxKind.SimpleAssignmentExpression,
+                IdentifierName("Namespace"),
+                LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(namespaceName))));
+
+    private sealed record PropSpec(string Name, TypeSyntax Type, List<AttributeListSyntax> XmlAttributes);
+
+    private static IEnumerable<PropSpec> BuildProperties(
+        SchemaGraph graph,
+        ComplexTypeNode type,
+        EmitOptions options,
+        string enclosingTypeName)
+    {
+        foreach (var attr in type.Attributes)
+        {
+            var clr = ResolveClrType(graph, attr.TypeId, options);
+            var xmlAttr = AttributeList(SingletonSeparatedList(
+                Attribute(IdentifierName("XmlAttribute"))
+                    .WithArgumentList(AttributeArgumentList(SingletonSeparatedList(
+                        AttributeArgument(
+                            LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(attr.Name))))))));
+            yield return new PropSpec(SanitizeProp(attr.Name, enclosingTypeName), ParseTypeName(clr), [xmlAttr]);
+        }
+
+        if (type.HasSimpleContent || type.BinaryFacet != BinaryFacet.None)
+        {
+            var clr = type.SimpleContentClrType
+                      ?? (type.BinaryFacet != BinaryFacet.None ? "byte[]" : "string");
+            var xmlText = AttributeList(SingletonSeparatedList(Attribute(IdentifierName("XmlText"))));
+            yield return new PropSpec(SanitizeProp("Value", enclosingTypeName), ParseTypeName(clr), [xmlText]);
+        }
+
+        if (type.Particle is { } particle)
+        {
+            foreach (var prop in FlattenElements(graph, particle, options, enclosingTypeName))
+                yield return prop;
+        }
+    }
+
+    private static IEnumerable<PropSpec> FlattenElements(
+        SchemaGraph graph,
+        Particle particle,
+        EmitOptions options,
+        string enclosingTypeName)
+    {
+        if (particle.Kind == ParticleKind.Element)
+        {
+            yield return ElementProp(graph, particle, options, enclosingTypeName);
+            yield break;
+        }
+
+        foreach (var child in particle.Children)
+        {
+            foreach (var p in FlattenElements(graph, child, options, enclosingTypeName))
+                yield return p;
+        }
+    }
+
+    private static PropSpec ElementProp(
+        SchemaGraph graph,
+        Particle particle,
+        EmitOptions options,
+        string enclosingTypeName)
+    {
+        var name = particle.ElementName ?? "Item";
+        var clr = ResolveClrType(graph, particle.TypeId, options);
+        TypeSyntax typeSyntax;
+        if (particle.IsCollection)
+        {
+            typeSyntax = ParseTypeName($"Collection<{clr}>");
+        }
+        else
+        {
+            typeSyntax = ParseTypeName(clr);
+        }
+
+        var args = new List<AttributeArgumentSyntax>
+        {
+            AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(name)))
+        };
+        if (!string.IsNullOrEmpty(particle.ElementNamespace))
+        {
+            args.Add(AttributeArgument(
+                AssignmentExpression(
+                    SyntaxKind.SimpleAssignmentExpression,
+                    IdentifierName("Namespace"),
+                    LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(particle.ElementNamespace!)))));
+        }
+
+        var xmlEl = AttributeList(SingletonSeparatedList(
+            Attribute(IdentifierName("XmlElement"))
+                .WithArgumentList(AttributeArgumentList(SeparatedList(args)))));
+
+        return new PropSpec(SanitizeProp(name, enclosingTypeName), typeSyntax, [xmlEl]);
+    }
+
+    private static string ResolveClrType(SchemaGraph graph, SchemaTypeId? typeId, EmitOptions options)
+    {
+        if (typeId is null)
+            return "string";
+
+        if (typeId.Value.NamespaceName == "http://www.w3.org/2001/XMLSchema")
+        {
+            return typeId.Value.LocalName switch
+            {
+                "base64Binary" or "hexBinary" => "byte[]",
+                "boolean" => "bool",
+                "decimal" => "decimal",
+                "double" => "double",
+                "float" => "float",
+                "int" or "integer" => "int",
+                "long" => "long",
+                "short" => "short",
+                "dateTime" or "date" or "time" => "System.DateTime",
+                _ => "string"
+            };
+        }
+
+        // Excluded / external schemas (XmlDsig, XAdES) — keep XmlSerializer happy without generating them.
+        if (typeId.Value.NamespaceName.Contains("xmldsig", StringComparison.OrdinalIgnoreCase)
+            || typeId.Value.NamespaceName.Contains("01903", StringComparison.Ordinal))
+        {
+            return "System.Xml.XmlElement";
+        }
+
+        if (graph.SimpleById.TryGetValue(typeId.Value, out var simple))
+        {
+            var typeNs = SchemaNamespaceMapper.Map(options.RootNamespace, simple.Id.NamespaceName);
+            return "global::" + typeNs + "." + simple.CSharpName;
+        }
+
+        if (graph.ComplexById.TryGetValue(typeId.Value, out var complex))
+        {
+            var typeNs = SchemaNamespaceMapper.Map(options.RootNamespace, complex.Id.NamespaceName);
+            return "global::" + typeNs + "." + complex.CSharpName;
+        }
+
+        var fallbackNs = SchemaNamespaceMapper.Map(options.RootNamespace, typeId.Value.NamespaceName);
+        return "global::" + fallbackNs + "." + SanitizeProp(typeId.Value.LocalName);
+    }
+
+    private static string SanitizeProp(string name, string? enclosingTypeName = null)
+    {
+        if (string.IsNullOrEmpty(name))
+            return "Item";
+        var chars = name.Select(c => char.IsLetterOrDigit(c) || c == '_' ? c : '_').ToArray();
+        var s = new string(chars);
+        if (char.IsDigit(s[0]))
+            s = "_" + s;
+        if (s is "object" or "string" or "int" or "class" or "event" or "params" or "base" or "this")
+            s += "Value";
+        if (enclosingTypeName is not null && string.Equals(s, enclosingTypeName, StringComparison.Ordinal))
+            s += "Value";
+        return s;
+    }
+}

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:tns="urn:novolis:codegen:types"
+           targetNamespace="urn:novolis:codegen:types"
+           elementFormDefault="qualified">
+  <xs:simpleType name="FlagType">
+    <xs:restriction base="xs:boolean"/>
+  </xs:simpleType>
+  <xs:simpleType name="CountType">
+    <xs:restriction base="xs:int"/>
+  </xs:simpleType>
+  <xs:simpleType name="BigCountType">
+    <xs:restriction base="xs:long"/>
+  </xs:simpleType>
+  <xs:simpleType name="ShortCountType">
+    <xs:restriction base="xs:short"/>
+  </xs:simpleType>
+  <xs:simpleType name="MoneyType">
+    <xs:restriction base="xs:decimal"/>
+  </xs:simpleType>
+  <xs:simpleType name="RatioType">
+    <xs:restriction base="xs:double"/>
+  </xs:simpleType>
+  <xs:simpleType name="FloatType">
+    <xs:restriction base="xs:float"/>
+  </xs:simpleType>
+  <xs:simpleType name="WhenType">
+    <xs:restriction base="xs:dateTime"/>
+  </xs:simpleType>
+  <xs:simpleType name="HexBlobType">
+    <xs:restriction base="xs:hexBinary"/>
+  </xs:simpleType>
+  <xs:simpleType name="ColorType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Red"/>
+      <xs:enumeration value="Blue"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="AllGroupType">
+    <xs:all>
+      <xs:element name="A" type="xs:string"/>
+      <xs:element name="B" type="xs:string" minOccurs="0"/>
+    </xs:all>
+  </xs:complexType>
+  <xs:element name="AllDoc" type="tns:AllGroupType"/>
+</xs:schema>

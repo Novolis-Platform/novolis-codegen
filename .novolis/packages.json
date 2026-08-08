@@ -34,6 +34,31 @@
         "global.json",
         "Novolis.CodeGen.slnx"
       ]
+    },
+    "Novolis.CodeGen.Xml": {
+      "project": "src/Novolis.CodeGen.Xml/Novolis.CodeGen.Xml.csproj",
+      "paths": [
+        "src/Novolis.CodeGen.Xml/**",
+        "tests/Novolis.CodeGen.Unit/Xml/**",
+        "tests/Novolis.CodeGen.Unit/Fixtures/**",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json",
+        "Novolis.CodeGen.slnx"
+      ]
+    },
+    "Novolis.CodeGen.Xsd": {
+      "project": "src/Novolis.CodeGen.Xsd/Novolis.CodeGen.Xsd.csproj",
+      "paths": [
+        "src/Novolis.CodeGen.Xsd/**",
+        "src/Novolis.CodeGen.Xml/**",
+        "tests/Novolis.CodeGen.Unit/Xsd/**",
+        "tests/Novolis.CodeGen.Unit/Fixtures/**",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json",
+        "Novolis.CodeGen.slnx"
+      ]
     }
   }
 }

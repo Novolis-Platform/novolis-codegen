@@ -7,10 +7,16 @@
   <ItemGroup>
     <PackageReference Include="System.IO.Abstractions.TestingHelpers" />
     <PackageReference Include="TUnit" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Novolis.CodeGen.Reflection.ClassDiagram/Novolis.CodeGen.Reflection.ClassDiagram.csproj" />
     <ProjectReference Include="../../src/Novolis.CodeGen.Reflection.Dump/Novolis.CodeGen.Reflection.Dump.csproj" />
     <ProjectReference Include="../../src/Novolis.CodeGen.Reflection/Novolis.CodeGen.Reflection.csproj" />
+    <ProjectReference Include="../../src/Novolis.CodeGen.Xml/Novolis.CodeGen.Xml.csproj" />
+    <ProjectReference Include="../../src/Novolis.CodeGen.Xsd/Novolis.CodeGen.Xsd.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Fixtures\Schemas\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

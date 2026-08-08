@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:tns="urn:novolis:codegen:tiny"
+           targetNamespace="urn:novolis:codegen:tiny"
+           elementFormDefault="qualified">
+
+  <xs:simpleType name="BinaryPayloadType">
+    <xs:restriction base="xs:base64Binary"/>
+  </xs:simpleType>
+
+  <xs:complexType name="BinaryObjectType">
+    <xs:simpleContent>
+      <xs:extension base="xs:base64Binary">
+        <xs:attribute name="mimeCode" type="xs:string" use="optional"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="LineType">
+    <xs:sequence>
+      <xs:element name="Id" type="xs:string"/>
+      <xs:element name="Quantity" type="xs:decimal" minOccurs="0"/>
+      <xs:element name="Attachment" type="tns:BinaryObjectType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="Title" type="xs:string"/>
+      <xs:element name="Note" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="currencyID" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="DocumentType">
+    <xs:sequence>
+      <xs:element name="Header" type="tns:HeaderType"/>
+      <xs:element name="Line" type="tns:LineType" maxOccurs="unbounded"/>
+      <xs:choice minOccurs="0">
+        <xs:element name="Payload" type="tns:BinaryPayloadType"/>
+        <xs:element name="Comment" type="xs:string"/>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="Document" type="tns:DocumentType"/>
+</xs:schema>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:c="urn:novolis:codegen:common"
+           xmlns:b="urn:novolis:codegen:b"
+           targetNamespace="urn:novolis:codegen:b"
+           elementFormDefault="qualified">
+  <xs:import namespace="urn:novolis:codegen:common" schemaLocation="common.xsd"/>
+  <xs:complexType name="BType">
+    <xs:sequence>
+      <xs:element name="Shared" type="c:SharedType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="B" type="b:BType"/>
+</xs:schema>
