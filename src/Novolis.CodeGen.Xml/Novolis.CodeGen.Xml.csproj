@@ -7,4 +7,7 @@
     <PackageTags>xsd;xml;schema;codegen;novolis</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Novolis.CodeGen.Unit" />
+  </ItemGroup>
 </Project>

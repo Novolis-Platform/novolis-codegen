@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -9,6 +10,30 @@ namespace Novolis.CodeGen.Xsd;
 /// <summary>Emits XmlSerializer-friendly partial classes + interfaces from a SchemaGraph.</summary>
 public sealed class WireXmlSerializerProfile : IEmitProfile
 {
+    private static readonly FrozenDictionary<string, string> XsdBuiltins =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["base64Binary"] = "byte[]",
+            ["hexBinary"] = "byte[]",
+            ["boolean"] = "bool",
+            ["decimal"] = "decimal",
+            ["double"] = "double",
+            ["float"] = "float",
+            ["int"] = "int",
+            ["integer"] = "int",
+            ["long"] = "long",
+            ["short"] = "short",
+            ["dateTime"] = "System.DateTime",
+            ["date"] = "System.DateTime",
+            ["time"] = "System.DateTime"
+        }.ToFrozenDictionary(StringComparer.Ordinal);
+
+    private static readonly FrozenSet<string> ReservedPropNames =
+        new HashSet<string>(StringComparer.Ordinal)
+        {
+            "object", "string", "int", "class", "event", "params", "base", "this"
+        }.ToFrozenSet(StringComparer.Ordinal);
+
     /// <inheritdoc />
     public string Name => "WireXmlSerializer";
 
@@ -184,8 +209,6 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
         {
             var p = properties[i];
             var name = p.Name;
-            if (string.Equals(name, enclosingTypeName, StringComparison.Ordinal))
-                name += "Value";
             var n = 2;
             while (!used.Add(name))
             {
@@ -319,21 +342,7 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
             return "string";
 
         if (typeId.Value.NamespaceName == "http://www.w3.org/2001/XMLSchema")
-        {
-            return typeId.Value.LocalName switch
-            {
-                "base64Binary" or "hexBinary" => "byte[]",
-                "boolean" => "bool",
-                "decimal" => "decimal",
-                "double" => "double",
-                "float" => "float",
-                "int" or "integer" => "int",
-                "long" => "long",
-                "short" => "short",
-                "dateTime" or "date" or "time" => "System.DateTime",
-                _ => "string"
-            };
-        }
+            return XsdBuiltins.TryGetValue(typeId.Value.LocalName, out var builtin) ? builtin : "string";
 
         // Excluded / external schemas (XmlDsig, XAdES) — keep XmlSerializer happy without generating them.
         if (typeId.Value.NamespaceName.Contains("xmldsig", StringComparison.OrdinalIgnoreCase)
@@ -366,7 +375,7 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
         var s = new string(chars);
         if (char.IsDigit(s[0]))
             s = "_" + s;
-        if (s is "object" or "string" or "int" or "class" or "event" or "params" or "base" or "this")
+        if (ReservedPropNames.Contains(s))
             s += "Value";
         if (enclosingTypeName is not null && string.Equals(s, enclosingTypeName, StringComparison.Ordinal))
             s += "Value";

@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Xml;
 using System.Xml.Schema;
 
@@ -10,6 +11,24 @@ public static class SchemaGraphBuilder
     private static readonly XmlQualifiedName XsBase64 = new("base64Binary", XmlSchema.Namespace);
     private static readonly XmlQualifiedName XsHex = new("hexBinary", XmlSchema.Namespace);
 
+    private static readonly FrozenDictionary<XmlTypeCode, string> ClrByTypeCode =
+        new Dictionary<XmlTypeCode, string>
+        {
+            [XmlTypeCode.Base64Binary] = "byte[]",
+            [XmlTypeCode.HexBinary] = "byte[]",
+            [XmlTypeCode.Boolean] = "bool",
+            [XmlTypeCode.Decimal] = "decimal",
+            [XmlTypeCode.Double] = "double",
+            [XmlTypeCode.Float] = "float",
+            [XmlTypeCode.Int] = "int",
+            [XmlTypeCode.Integer] = "int",
+            [XmlTypeCode.Long] = "long",
+            [XmlTypeCode.Short] = "short",
+            [XmlTypeCode.DateTime] = "DateTime",
+            [XmlTypeCode.Date] = "DateTime",
+            [XmlTypeCode.Time] = "DateTime"
+        }.ToFrozenDictionary();
+
     /// <summary>Builds a graph from a compiled schema set.</summary>
     public static SchemaGraph Build(XmlSchemaSet schemaSet, SchemaGraphOptions? options = null)
     {
@@ -21,28 +40,24 @@ public static class SchemaGraphBuilder
         var simple = new Dictionary<SchemaTypeId, SimpleTypeNode>();
         var elements = new List<(XmlSchemaElement Element, SchemaTypeId? TypeId)>();
 
-        foreach (XmlSchemaType? type in schemaSet.GlobalTypes.Values)
+        foreach (XmlSchemaType type in schemaSet.GlobalTypes.Values)
         {
-            if (type is null)
-                continue;
             if (options.ExcludedNamespaces.Contains(type.QualifiedName.Namespace))
                 continue;
 
             switch (type)
             {
                 case XmlSchemaComplexType ct:
-                    AddComplex(ct, complex, referencedElementNames, options);
+                    AddComplex(ct, complex, referencedElementNames);
                     break;
                 case XmlSchemaSimpleType st:
-                    AddSimple(st, simple, options);
+                    AddSimple(st, simple);
                     break;
             }
         }
 
-        foreach (XmlSchemaElement? el in schemaSet.GlobalElements.Values)
+        foreach (XmlSchemaElement el in schemaSet.GlobalElements.Values)
         {
-            if (el is null)
-                continue;
             if (options.ExcludedNamespaces.Contains(el.QualifiedName.Namespace))
                 continue;
 
@@ -53,7 +68,7 @@ public static class SchemaGraphBuilder
                 && typeId is { } tid
                 && !complex.ContainsKey(tid))
             {
-                AddComplex(anonCt, complex, referencedElementNames, options, overrideId: tid);
+                AddComplex(anonCt, complex, referencedElementNames, overrideId: tid);
             }
         }
 
@@ -117,14 +132,9 @@ public static class SchemaGraphBuilder
         XmlSchemaComplexType ct,
         Dictionary<SchemaTypeId, ComplexTypeNode> complex,
         HashSet<XmlQualifiedName> referencedElementNames,
-        SchemaGraphOptions options,
         SchemaTypeId? overrideId = null)
     {
         var id = overrideId ?? ToTypeId(ct.QualifiedName, ct);
-        if (complex.ContainsKey(id))
-            return;
-        if (options.ExcludedNamespaces.Contains(id.NamespaceName))
-            return;
 
         var particle = MapParticle(ct.ContentTypeParticle, referencedElementNames);
         var attrs = MapAttributes(ct);
@@ -155,40 +165,17 @@ public static class SchemaGraphBuilder
             return (true, MapTypeCode(ct.Datatype?.TypeCode));
         }
 
-        if (ct.ContentModel is XmlSchemaSimpleContent)
-        {
-            if (binary is BinaryFacet.Base64Binary or BinaryFacet.BinaryObject)
-                return (true, "byte[]");
-            return (true, MapTypeCode(ct.Datatype?.TypeCode));
-        }
-
         return (false, null);
     }
 
-    private static string MapTypeCode(XmlTypeCode? code) => code switch
-    {
-        XmlTypeCode.Base64Binary or XmlTypeCode.HexBinary => "byte[]",
-        XmlTypeCode.Boolean => "bool",
-        XmlTypeCode.Decimal => "decimal",
-        XmlTypeCode.Double => "double",
-        XmlTypeCode.Float => "float",
-        XmlTypeCode.Int or XmlTypeCode.Integer => "int",
-        XmlTypeCode.Long => "long",
-        XmlTypeCode.Short => "short",
-        XmlTypeCode.DateTime or XmlTypeCode.Date or XmlTypeCode.Time => "DateTime",
-        _ => "string"
-    };
+    private static string MapTypeCode(XmlTypeCode? code) =>
+        code is { } c && ClrByTypeCode.TryGetValue(c, out var clr) ? clr : "string";
 
     private static void AddSimple(
         XmlSchemaSimpleType st,
-        Dictionary<SchemaTypeId, SimpleTypeNode> simple,
-        SchemaGraphOptions options)
+        Dictionary<SchemaTypeId, SimpleTypeNode> simple)
     {
         var id = ToTypeId(st.QualifiedName, st);
-        if (simple.ContainsKey(id))
-            return;
-        if (options.ExcludedNamespaces.Contains(id.NamespaceName))
-            return;
 
         var (clr, binary) = MapSimpleClr(st);
         var baseId = st.BaseXmlSchemaType is { } bas && bas.QualifiedName.Name is { Length: > 0 }
@@ -219,23 +206,17 @@ public static class SchemaGraphBuilder
 
     private static (string Clr, BinaryFacet Binary) MapSimpleClr(XmlSchemaSimpleType st)
     {
-        var qn = st.Datatype?.TypeCode switch
+        BinaryFacet binary = BinaryFacet.None;
+        var clr = "string";
+        if (st.Datatype?.TypeCode is { } code && ClrByTypeCode.TryGetValue(code, out var mapped))
         {
-            XmlTypeCode.Base64Binary => (nameof(Byte) + "[]", BinaryFacet.Base64Binary),
-            XmlTypeCode.HexBinary => (nameof(Byte) + "[]", BinaryFacet.Base64Binary),
-            XmlTypeCode.Boolean => ("bool", BinaryFacet.None),
-            XmlTypeCode.Decimal => ("decimal", BinaryFacet.None),
-            XmlTypeCode.Double => ("double", BinaryFacet.None),
-            XmlTypeCode.Float => ("float", BinaryFacet.None),
-            XmlTypeCode.Int or XmlTypeCode.Integer => ("int", BinaryFacet.None),
-            XmlTypeCode.Long => ("long", BinaryFacet.None),
-            XmlTypeCode.Short => ("short", BinaryFacet.None),
-            XmlTypeCode.DateTime or XmlTypeCode.Date or XmlTypeCode.Time => ("DateTime", BinaryFacet.None),
-            _ => ("string", BinaryFacet.None)
-        };
+            clr = mapped;
+            if (code is XmlTypeCode.Base64Binary or XmlTypeCode.HexBinary)
+                binary = BinaryFacet.Base64Binary;
+        }
 
         // Walk base for base64 when TypeCode is string but named BinaryObject
-        if (qn.Item2 == BinaryFacet.None
+        if (binary == BinaryFacet.None
             && (st.QualifiedName.Name.Contains("Binary", StringComparison.OrdinalIgnoreCase)
                 || st.BaseXmlSchemaType?.QualifiedName == XsBase64
                 || st.BaseXmlSchemaType?.QualifiedName == XsHex))
@@ -248,17 +229,18 @@ public static class SchemaGraphBuilder
         if (st.QualifiedName.Name.Contains("BinaryObject", StringComparison.Ordinal))
             return ("byte[]", BinaryFacet.BinaryObject);
 
-        return qn;
+        return (clr, binary);
     }
 
     private static BinaryFacet DetectBinaryFacet(XmlSchemaComplexType ct)
     {
         if (ct.QualifiedName.Name.Contains("BinaryObject", StringComparison.OrdinalIgnoreCase)
-            || ct.Name?.Contains("BinaryObject", StringComparison.OrdinalIgnoreCase) == true)
+            || ct.Name is not null && ct.Name.Contains("BinaryObject", StringComparison.OrdinalIgnoreCase))
             return BinaryFacet.BinaryObject;
 
         if (ct.ContentType == XmlSchemaContentType.TextOnly
-            && ct.Datatype?.TypeCode is XmlTypeCode.Base64Binary or XmlTypeCode.HexBinary)
+            && ct.Datatype is { TypeCode: var code }
+            && (code == XmlTypeCode.Base64Binary || code == XmlTypeCode.HexBinary))
             return BinaryFacet.Base64Binary;
 
         return BinaryFacet.None;
@@ -267,19 +249,15 @@ public static class SchemaGraphBuilder
     private static IReadOnlyList<AttributeDecl> MapAttributes(XmlSchemaComplexType ct)
     {
         var list = new List<AttributeDecl>();
-        foreach (XmlSchemaObject? obj in ct.AttributeUses.Values)
+        foreach (XmlSchemaAttribute attr in ct.AttributeUses.Values.OfType<XmlSchemaAttribute>())
         {
-            if (obj is not XmlSchemaAttribute attr)
-                continue;
             var name = attr.QualifiedName.Name;
-            if (string.IsNullOrEmpty(name))
-                name = attr.Name ?? "attr";
-            SchemaTypeId? typeId = null;
-            if (attr.AttributeSchemaType is { } at)
-                typeId = ToTypeId(at.QualifiedName.Name.Length > 0 ? at.QualifiedName : XsString, at);
+            SchemaTypeId? typeId = attr.AttributeSchemaType is { } at
+                ? ToTypeId(string.IsNullOrEmpty(at.QualifiedName.Name) ? XsString : at.QualifiedName, at)
+                : null;
 
             list.Add(new AttributeDecl(
-                name,
+                string.IsNullOrEmpty(name) ? "attr" : name,
                 string.IsNullOrEmpty(attr.QualifiedName.Namespace) ? null : attr.QualifiedName.Namespace,
                 typeId,
                 attr.Use == XmlSchemaUse.Required,
@@ -302,8 +280,8 @@ public static class SchemaGraphBuilder
             XmlSchemaSequence seq => MapGroup(ParticleKind.Sequence, seq, referenced),
             XmlSchemaChoice choice => MapGroup(ParticleKind.Choice, choice, referenced),
             XmlSchemaAll all => MapGroup(ParticleKind.All, all, referenced),
-            XmlSchemaGroupRef groupRef when groupRef.Particle is { } inner =>
-                MapParticle(inner, referenced),
+            // Compiled schemas usually expand group refs; keep a recursive fallback for raw particles.
+            XmlSchemaGroupRef groupRef => MapParticle(groupRef.Particle, referenced),
             _ => null
         };
     }
@@ -368,11 +346,11 @@ public static class SchemaGraphBuilder
             // Anonymous type: synthesize id from element qname
             var eq = el.QualifiedName.IsEmpty ? el.RefName : el.QualifiedName;
             if (!eq.IsEmpty)
-                return new SchemaTypeId(eq.Namespace ?? string.Empty, eq.Name + "Type");
+                return new SchemaTypeId(eq.Namespace, eq.Name + "Type");
         }
 
         if (!el.SchemaTypeName.IsEmpty)
-            return new SchemaTypeId(el.SchemaTypeName.Namespace ?? string.Empty, el.SchemaTypeName.Name);
+            return new SchemaTypeId(el.SchemaTypeName.Namespace, el.SchemaTypeName.Name);
 
         return null;
     }
@@ -380,13 +358,13 @@ public static class SchemaGraphBuilder
     private static SchemaTypeId ToTypeId(XmlQualifiedName qn, XmlSchemaType type)
     {
         if (!qn.IsEmpty && qn.Name.Length > 0)
-            return new SchemaTypeId(qn.Namespace ?? string.Empty, qn.Name);
+            return new SchemaTypeId(qn.Namespace, qn.Name);
 
         // Anonymous
         var name = type.Name;
         if (string.IsNullOrEmpty(name))
             name = "Anonymous" + Math.Abs(type.GetHashCode());
-        return new SchemaTypeId(type.QualifiedName.Namespace ?? string.Empty, name);
+        return new SchemaTypeId(type.QualifiedName.Namespace, name);
     }
 
     private static string SanitizeName(string name)

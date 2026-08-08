@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:tns="urn:novolis:codegen:edges"
+           targetNamespace="urn:novolis:codegen:edges"
+           elementFormDefault="qualified">
+
+  <!-- Name-walk BinaryObject when TypeCode is string -->
+  <xs:simpleType name="WeirdBinaryObject">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+
+  <!-- Named *Binary* over hexBinary -->
+  <xs:simpleType name="PayloadBinary">
+    <xs:restriction base="xs:hexBinary"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="EmptyEnumType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value=""/>
+      <xs:enumeration value="Ok"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Hex simple content (not BinaryObject name) → Base64Binary facet -->
+  <xs:complexType name="HexBlobWrapType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="encoding" type="xs:string"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="AmountType">
+    <xs:simpleContent>
+      <xs:extension base="xs:decimal">
+        <xs:attribute name="currencyID" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="FlagWrapType">
+    <xs:simpleContent>
+      <xs:extension base="xs:boolean">
+        <xs:attribute name="source" type="xs:string"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="WhenWrapType">
+    <xs:simpleContent>
+      <xs:extension base="xs:dateTime"/>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="FloatWrapType">
+    <xs:simpleContent>
+      <xs:extension base="xs:float"/>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="LongWrapType">
+    <xs:simpleContent>
+      <xs:extension base="xs:long"/>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="DoubleWrapType">
+    <xs:simpleContent>
+      <xs:extension base="xs:double"/>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="IntWrapType">
+    <xs:simpleContent>
+      <xs:extension base="xs:int"/>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="ShortWrapType">
+    <xs:simpleContent>
+      <xs:extension base="xs:short"/>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="DateWrapType">
+    <xs:simpleContent>
+      <xs:extension base="xs:date"/>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="TimeWrapType">
+    <xs:simpleContent>
+      <xs:extension base="xs:time"/>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <!-- Name contains Binary but not BinaryObject → Base64Binary facet via name walk -->
+  <xs:simpleType name="OtherBinary">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+
+  <!-- Named BinaryObject over base64 → MapSimpleClr line that upgrades facet -->
+  <xs:simpleType name="UpgradeBinaryObject">
+    <xs:restriction base="xs:base64Binary"/>
+  </xs:simpleType>
+
+  <!-- Union / list simple types (non-restriction content) -->
+  <xs:simpleType name="UnionFlag">
+    <xs:union memberTypes="xs:string xs:boolean"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="ListOfToken">
+    <xs:list itemType="xs:token"/>
+  </xs:simpleType>
+
+  <!-- Collapsible-style CBC wrapper: simple content + attributes -->
+  <xs:complexType name="CodeType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="listID" type="xs:string"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <!-- No Type suffix → BaseTypeName appends Base -->
+  <xs:complexType name="PlainParty">
+    <xs:sequence>
+      <xs:element name="Name" type="xs:string"/>
+      <xs:element name="Code" type="tns:CodeType" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="scheme" type="xs:string"/>
+    <xs:attribute name="class" type="xs:string"/>
+  </xs:complexType>
+
+  <xs:group name="SharedBits">
+    <xs:sequence>
+      <xs:element name="G1" type="xs:string"/>
+      <xs:element name="G2" type="xs:int" minOccurs="0"/>
+    </xs:sequence>
+  </xs:group>
+
+  <xs:complexType name="GroupedType">
+    <xs:sequence>
+      <xs:group ref="tns:SharedBits"/>
+      <xs:element name="Tail" type="xs:long"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="AllType">
+    <xs:all>
+      <xs:element name="X" type="xs:float"/>
+      <xs:element name="Y" type="xs:double" minOccurs="0"/>
+    </xs:all>
+  </xs:complexType>
+
+  <xs:complexType name="PrimitivesType">
+    <xs:sequence>
+      <xs:element name="B64" type="xs:base64Binary"/>
+      <xs:element name="Hex" type="xs:hexBinary" minOccurs="0"/>
+      <xs:element name="Flag" type="xs:boolean"/>
+      <xs:element name="Dec" type="xs:decimal"/>
+      <xs:element name="Dbl" type="xs:double"/>
+      <xs:element name="Flt" type="xs:float"/>
+      <xs:element name="I" type="xs:int"/>
+      <xs:element name="N" type="xs:integer"/>
+      <xs:element name="L" type="xs:long"/>
+      <xs:element name="S" type="xs:short"/>
+      <xs:element name="Dt" type="xs:dateTime"/>
+      <xs:element name="D" type="xs:date"/>
+      <xs:element name="T" type="xs:time"/>
+      <xs:element name="Notes" type="xs:string" maxOccurs="unbounded"/>
+      <xs:element name="Amount" type="tns:AmountType" minOccurs="0"/>
+      <xs:element name="Blob" type="tns:HexBlobWrapType" minOccurs="0"/>
+      <xs:element name="WeirdBin" type="tns:WeirdBinaryObject" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="class" type="xs:string"/>
+    <xs:attribute name="object" type="xs:string"/>
+    <xs:attribute name="event" type="xs:string" use="required"/>
+    <xs:attribute name="params" type="xs:string"/>
+    <xs:attribute name="base" type="xs:string"/>
+    <xs:attribute name="this" type="xs:string"/>
+    <xs:attribute name="string" type="xs:string"/>
+    <xs:attribute name="int" type="xs:string"/>
+    <xs:attribute name="fixedCode" type="xs:string" fixed="EUR"/>
+  </xs:complexType>
+
+  <xs:complexType name="AbstractBase" abstract="true">
+    <xs:sequence>
+      <xs:element name="Id" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Property name equals enclosing type → DeduplicatePropertyNames -->
+  <xs:complexType name="CollisionType">
+    <xs:sequence>
+      <xs:element name="CollisionType" type="xs:string"/>
+      <xs:choice>
+        <xs:element name="Alt" type="xs:string"/>
+        <xs:element name="AltNum" type="xs:int"/>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="AnonRoot">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Inner" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="SharedLeaf" type="xs:string" nillable="true"/>
+
+  <xs:complexType name="RefUserType">
+    <xs:sequence>
+      <xs:element ref="tns:SharedLeaf" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="weird-name-type">
+    <xs:sequence>
+      <xs:element name="V" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="Primitives" type="tns:PrimitivesType"/>
+  <xs:element name="Grouped" type="tns:GroupedType"/>
+  <xs:element name="AllDoc" type="tns:AllType"/>
+  <xs:element name="Collision" type="tns:CollisionType"/>
+  <xs:element name="RefUser" type="tns:RefUserType"/>
+  <xs:element name="Weird" type="tns:weird-name-type"/>
+  <xs:element name="Party" type="tns:PlainParty"/>
+</xs:schema>

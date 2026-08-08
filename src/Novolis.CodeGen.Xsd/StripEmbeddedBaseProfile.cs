@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -19,6 +20,30 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
     {
         "Invoice", "CreditNote", "Reminder"
     };
+
+    private static readonly FrozenDictionary<string, string> XsdBuiltins =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["base64Binary"] = "byte[]",
+            ["hexBinary"] = "byte[]",
+            ["boolean"] = "bool",
+            ["decimal"] = "decimal",
+            ["double"] = "double",
+            ["float"] = "float",
+            ["int"] = "int",
+            ["integer"] = "int",
+            ["long"] = "long",
+            ["short"] = "short",
+            ["dateTime"] = "DateTime",
+            ["date"] = "DateTime",
+            ["time"] = "DateTime"
+        }.ToFrozenDictionary(StringComparer.Ordinal);
+
+    private static readonly FrozenSet<string> ReservedPropNames =
+        new HashSet<string>(StringComparer.Ordinal)
+        {
+            "object", "string", "int", "class", "event", "params", "base", "this"
+        }.ToFrozenSet(StringComparer.Ordinal);
 
     /// <inheritdoc />
     public EmitResult Emit(SchemaGraph graph, EmitOptions options)
@@ -112,8 +137,6 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
 
     private static bool IsCollapsibleScalar(ComplexTypeNode type)
     {
-        if (type.BinaryFacet != BinaryFacet.None)
-            return false;
         // Simple content CBC/UDT wrappers → collapse to CLR when referenced
         if (type.HasSimpleContent && type.Particle is null)
             return true;
@@ -251,19 +274,8 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
         return Wrap("string", collection, optional);
     }
 
-    private static string MapXsdBuiltin(string local) => local switch
-    {
-        "base64Binary" or "hexBinary" => "byte[]",
-        "boolean" => "bool",
-        "decimal" => "decimal",
-        "double" => "double",
-        "float" => "float",
-        "int" or "integer" => "int",
-        "long" => "long",
-        "short" => "short",
-        "dateTime" or "date" or "time" => "DateTime",
-        _ => "string"
-    };
+    private static string MapXsdBuiltin(string local) =>
+        XsdBuiltins.TryGetValue(local, out var clr) ? clr : "string";
 
     private static string Wrap(string clr, bool collection, bool optional)
     {
@@ -439,7 +451,7 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
         var s = new string(chars);
         if (char.IsDigit(s[0]))
             s = "_" + s;
-        if (s is "object" or "string" or "int" or "class" or "event" or "params" or "base" or "this")
+        if (ReservedPropNames.Contains(s))
             s += "Value";
         return s;
     }

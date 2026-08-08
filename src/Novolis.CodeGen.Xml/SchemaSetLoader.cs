@@ -28,12 +28,6 @@ public static class SchemaSetLoader
         ArgumentNullException.ThrowIfNull(schemaFiles);
         var schemaSet = new XmlSchemaSet();
 
-        ValidationEventHandler handler = (_, e) =>
-        {
-            if (e.Severity == XmlSeverityType.Error)
-                throw new XmlSchemaException(e.Message, e.Exception);
-        };
-
         foreach (var path in schemaFiles.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
         {
             using var reader = XmlReader.Create(path, new XmlReaderSettings
@@ -41,7 +35,7 @@ public static class SchemaSetLoader
                 DtdProcessing = DtdProcessing.Parse,
                 XmlResolver = new XmlUrlResolver()
             });
-            var schema = XmlSchema.Read(reader, handler)
+            var schema = XmlSchema.Read(reader, OnValidationEvent)
                          ?? throw new InvalidOperationException($"Failed to read schema '{path}'.");
             schema.SourceUri = new Uri(Path.GetFullPath(path)).AbsoluteUri;
             schemaSet.Add(schema);
@@ -54,7 +48,17 @@ public static class SchemaSetLoader
         }
 
         schemaSet.XmlResolver = null;
+        schemaSet.ValidationEventHandler += OnValidationEvent;
         schemaSet.Compile();
         return schemaSet;
+    }
+
+    /// <summary>Validation callback used while reading/compiling schemas.</summary>
+    public static void OnValidationEvent(object? sender, ValidationEventArgs e)
+    {
+        if (e.Severity != XmlSeverityType.Error)
+            return;
+
+        throw new XmlSchemaException(e.Message, e.Exception);
     }
 }

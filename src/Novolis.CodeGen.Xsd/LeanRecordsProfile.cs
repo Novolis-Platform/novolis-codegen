@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -9,6 +10,10 @@ namespace Novolis.CodeGen.Xsd;
 /// <summary>Emits lean records omitting BinaryFacet / byte[] embeddings.</summary>
 public sealed class LeanRecordsProfile : IEmitProfile
 {
+    private static readonly FrozenSet<string> XsdBinaryLocals =
+        new HashSet<string>(StringComparer.Ordinal) { "base64Binary", "hexBinary" }
+            .ToFrozenSet(StringComparer.Ordinal);
+
     /// <inheritdoc />
     public string Name => "LeanRecords";
 
@@ -105,7 +110,7 @@ public sealed class LeanRecordsProfile : IEmitProfile
         }
 
         if (typeId.Value.NamespaceName == "http://www.w3.org/2001/XMLSchema"
-            && typeId.Value.LocalName is "base64Binary" or "hexBinary")
+            && XsdBinaryLocals.Contains(typeId.Value.LocalName))
             return "byte[]";
 
         return Sanitize(typeId.Value.LocalName);

@@ -1,3 +1,4 @@
+using System.Xml.Schema;
 using Novolis.CodeGen.Xml;
 using Novolis.CodeGen.Xsd;
 
@@ -7,6 +8,9 @@ public sealed class SchemaSetLoaderAndCoverageTests
 {
     private static string FixturesDir =>
         Path.Combine(AppContext.BaseDirectory, "Fixtures", "Schemas");
+
+    private static string BadSchemasDir =>
+        Path.Combine(AppContext.BaseDirectory, "Fixtures", "BadSchemas");
 
     [Test]
     public async Task LoadFromDirectory_CompilesTinyFolder()
@@ -21,6 +25,82 @@ public sealed class SchemaSetLoaderAndCoverageTests
     {
         await Assert.That(() => SchemaSetLoader.LoadFromDirectory(Path.Combine(FixturesDir, "no-such-dir")))
             .ThrowsExactly<DirectoryNotFoundException>();
+    }
+
+    [Test]
+    public async Task LoadFromFiles_Null_Throws()
+    {
+        await Assert.That(() => SchemaSetLoader.LoadFromFiles(null!))
+            .ThrowsExactly<ArgumentNullException>();
+    }
+
+    [Test]
+    public async Task LoadFromFiles_EmptyEnumerable_CompilesEmptySet()
+    {
+        var set = SchemaSetLoader.LoadFromFiles(Array.Empty<string>());
+        await Assert.That(set.IsCompiled).IsTrue();
+        await Assert.That(set.Count).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task LoadFromFiles_InvalidSchema_ThrowsXmlSchemaException()
+    {
+        var path = Path.Combine(BadSchemasDir, "invalid-compile.xsd");
+        await Assert.That(() => SchemaSetLoader.LoadFromFiles([path]))
+            .ThrowsExactly<XmlSchemaException>();
+    }
+
+    [Test]
+    public async Task LoadFromFiles_InvalidRead_ThrowsXmlSchemaException()
+    {
+        var path = Path.Combine(BadSchemasDir, "invalid-read.xsd");
+        await Assert.That(() => SchemaSetLoader.LoadFromFiles([path]))
+            .ThrowsExactly<XmlSchemaException>();
+    }
+
+    [Test]
+    public async Task OnValidationEvent_WarningDoesNotThrow_ErrorThrows()
+    {
+        var warningCtor = typeof(ValidationEventArgs)
+            .GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            .OrderByDescending(c => c.GetParameters().Length)
+            .First();
+        var parms = warningCtor.GetParameters();
+
+        object?[] BuildArgs(XmlSeverityType severity)
+        {
+            var args = new object?[parms.Length];
+            for (var i = 0; i < parms.Length; i++)
+            {
+                var p = parms[i];
+                if (p.ParameterType == typeof(XmlSeverityType))
+                    args[i] = severity;
+                else if (p.ParameterType == typeof(string))
+                    args[i] = severity == XmlSeverityType.Error ? "err" : "warn";
+                else if (p.ParameterType == typeof(Exception) || p.ParameterType == typeof(XmlSchemaException))
+                    args[i] = severity == XmlSeverityType.Error ? new XmlSchemaException("err") : null;
+                else if (p.ParameterType == typeof(XmlSchemaObject))
+                    args[i] = null;
+                else if (p.ParameterType == typeof(object))
+                    args[i] = null;
+                else
+                    args[i] = p.ParameterType.IsValueType ? Activator.CreateInstance(p.ParameterType) : null;
+            }
+
+            return args;
+        }
+
+        SchemaSetLoader.OnValidationEvent(null, (ValidationEventArgs)warningCtor.Invoke(BuildArgs(XmlSeverityType.Warning)));
+        await Assert.That(() => SchemaSetLoader.OnValidationEvent(null, (ValidationEventArgs)warningCtor.Invoke(BuildArgs(XmlSeverityType.Error))))
+            .ThrowsExactly<XmlSchemaException>();
+    }
+
+    [Test]
+    public async Task LoadFromFiles_WarningOnly_StillCompiles()
+    {
+        var path = Path.Combine(BadSchemasDir, "warning-read.xsd");
+        var set = SchemaSetLoader.LoadFromFiles([path]);
+        await Assert.That(set.IsCompiled).IsTrue();
     }
 
     [Test]
@@ -71,9 +151,60 @@ public sealed class SchemaSetLoaderAndCoverageTests
     }
 
     [Test]
+    public async Task SyntaxEmitWriter_WriteAll_NullResultOrBlankDir_Throws()
+    {
+        await Assert.That(() => SyntaxEmitWriter.WriteAll(null!, Path.GetTempPath()))
+            .ThrowsExactly<ArgumentNullException>();
+        await Assert.That(() => SyntaxEmitWriter.WriteAll(new EmitResult([]), "  "))
+            .ThrowsExactly<ArgumentException>();
+    }
+
+    [Test]
     public async Task SchemaNamespaceMapper_MapsUblInvoice()
     {
         var ns = SchemaNamespaceMapper.Map("Novolis.Xsd.Ubl", "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2");
         await Assert.That(ns).IsEqualTo("Novolis.Xsd.Ubl.Invoice");
+    }
+
+    [Test]
+    public async Task SchemaNamespaceMapper_MapsKnownSuffixesAndFallbacks()
+    {
+        const string root = "Root";
+        await Assert.That(SchemaNamespaceMapper.Map(root, "")).IsEqualTo(root);
+        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2"))
+            .IsEqualTo(root + ".CommonExtensionComponents");
+        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:oasis:names:specification:ubl:schema:xsd:CommonSignatureComponents-2"))
+            .IsEqualTo(root + ".CommonSignatureComponents");
+        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:oasis:names:specification:ubl:schema:xsd:SignatureBasicComponents-2"))
+            .IsEqualTo(root + ".SignatureBasicComponents");
+        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:oasis:names:specification:ubl:schema:xsd:SignatureAggregateComponents-2"))
+            .IsEqualTo(root + ".SignatureAggregateComponents");
+        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"))
+            .IsEqualTo(root + ".CommonAggregateComponents");
+        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"))
+            .IsEqualTo(root + ".CommonBasicComponents");
+        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:oasis:names:specification:ubl:schema:xsd:UnqualifiedDataTypes-2"))
+            .IsEqualTo(root + ".UnqualifiedDataTypes");
+        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:oasis:names:specification:ubl:schema:xsd:BaseDocument-2"))
+            .IsEqualTo(root + ".BaseDocument");
+        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:un:unece:uncefact:data:specification:CoreComponentTypeSchemaModule:2"))
+            .IsEqualTo(root + ".CoreComponentTypes");
+        await Assert.That(SchemaNamespaceMapper.Map(root, "http://www.w3.org/2000/09/xmldsig#"))
+            .IsEqualTo(root + ".XmlDsig");
+        await Assert.That(SchemaNamespaceMapper.Map(root, "http://uri.etsi.org/01903/v1.3.2#"))
+            .IsEqualTo(root + ".Xades");
+        await Assert.That(SchemaNamespaceMapper.Map(root, "http://www.unece.org/cefact/namespaces/StandardBusinessDocumentHeader"))
+            .IsEqualTo(root + ".Envelope");
+        await Assert.That(SchemaNamespaceMapper.Map(root, "___"))
+            .IsEqualTo(root + ".Generated");
+        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:novolis:codegen:tiny"))
+            .IsEqualTo(root + ".Tiny");
+    }
+
+    [Test]
+    public async Task SchemaNamespaceMapper_BlankRoot_Throws()
+    {
+        await Assert.That(() => SchemaNamespaceMapper.Map("  ", "urn:x"))
+            .ThrowsExactly<ArgumentException>();
     }
 }

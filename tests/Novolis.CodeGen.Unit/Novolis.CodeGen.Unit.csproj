@@ -18,5 +18,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Fixtures\Schemas\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Fixtures\BadSchemas\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

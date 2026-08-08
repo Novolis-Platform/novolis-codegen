@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:tns="urn:novolis:codegen:collide"
+           targetNamespace="urn:novolis:codegen:collide"
+           elementFormDefault="qualified">
+  <!-- Named FooType plus anonymous element Foo synthesizes FooType → ContainsKey early-return -->
+  <xs:complexType name="FooType">
+    <xs:sequence>
+      <xs:element name="A" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="Foo">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="B" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Named" type="tns:FooType"/>
+</xs:schema>

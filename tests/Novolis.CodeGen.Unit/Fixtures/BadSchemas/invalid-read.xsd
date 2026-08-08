@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Invalid attribute use triggers XmlSchema.Read validation Error -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="Broken">
+    <xs:complexType>
+      <xs:attribute name="x" use="not-a-valid-use"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

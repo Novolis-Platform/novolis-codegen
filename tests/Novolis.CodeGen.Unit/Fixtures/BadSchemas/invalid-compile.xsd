@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:tns="urn:novolis:codegen:invalid"
+           targetNamespace="urn:novolis:codegen:invalid"
+           elementFormDefault="qualified">
+  <!-- References a type that does not exist → compile validation error -->
+  <xs:element name="Broken" type="tns:MissingType"/>
+</xs:schema>

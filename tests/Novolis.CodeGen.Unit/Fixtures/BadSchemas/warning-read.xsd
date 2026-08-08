@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Duplicate enumeration facet often surfaces as Warning during Read -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="DupEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="A"/>
+      <xs:enumeration value="A"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="E" type="DupEnum"/>
+</xs:schema>
