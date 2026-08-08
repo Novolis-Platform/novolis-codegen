@@ -120,6 +120,12 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
                 AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
                     .WithSemicolonToken(Token(SyntaxKind.SemicolonToken)));
 
+        if (options.EnableNullable && !IsClrValueTypeName(clr))
+        {
+            prop = prop
+                .WithInitializer(EqualsValueClause(ParseExpression("null!")))
+                .WithSemicolonToken(Token(SyntaxKind.SemicolonToken));
+        }
         var cls = ClassDeclaration(type.CSharpName)
             .AddModifiers(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.PartialKeyword))
             .AddAttributeLists(XmlTypeAttributeList(type.Id.LocalName, type.Id.NamespaceName))
@@ -188,6 +194,7 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
             if (p.XmlAttributes.Count > 0)
                 prop = prop.WithAttributeLists(List(p.XmlAttributes));
 
+            prop = WithPropertyInitializer(prop, p);
             classMembers.Add(WithSummaryDoc(prop, p.Documentation));
         }
 
@@ -261,8 +268,43 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
         string Name,
         TypeSyntax Type,
         List<AttributeListSyntax> XmlAttributes,
-        string? Documentation = null);
+        string? Documentation = null,
+        bool IsOptional = false,
+        bool IsCollection = false,
+        string? ClrElementType = null);
 
+    private static PropertyDeclarationSyntax WithPropertyInitializer(PropertyDeclarationSyntax prop, PropSpec p)
+    {
+        // XmlSerializer types are activated via parameterless ctor; satisfy CS8618 without lying about optionality.
+        if (p.IsCollection && !p.IsOptional)
+        {
+            return prop
+                .WithInitializer(EqualsValueClause(ImplicitObjectCreationExpression()))
+                .WithSemicolonToken(Token(SyntaxKind.SemicolonToken));
+        }
+
+        if (p.IsOptional)
+            return prop;
+
+        var clr = p.ClrElementType;
+        if (string.IsNullOrEmpty(clr) || IsClrValueTypeName(clr))
+            return prop;
+
+        return prop
+            .WithInitializer(EqualsValueClause(ParseExpression("null!")))
+            .WithSemicolonToken(Token(SyntaxKind.SemicolonToken));
+    }
+
+    private static bool IsClrValueTypeName(string clr)
+    {
+        var t = clr.EndsWith('?') ? clr[..^1] : clr;
+        return t is "bool" or "byte" or "sbyte" or "short" or "ushort" or "int" or "uint"
+            or "long" or "ulong" or "float" or "double" or "decimal" or "char"
+            or "System.DateTime" or "DateTime"
+            or "System.DateTimeOffset" or "DateTimeOffset"
+            or "System.Guid" or "Guid"
+            or "System.TimeSpan" or "TimeSpan";
+    }
     private static IEnumerable<PropSpec> BuildProperties(
         SchemaGraph graph,
         ComplexTypeNode type,
@@ -282,7 +324,10 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
                 SanitizeProp(attr.Name, enclosingTypeName),
                 EmitNullability.ParseAnnotated(clr, optional, collection: false),
                 [xmlAttr],
-                attr.Documentation);
+                attr.Documentation,
+                IsOptional: optional,
+                IsCollection: false,
+                ClrElementType: clr);
         }
 
         if (type.HasSimpleContent || type.BinaryFacet != BinaryFacet.None)
@@ -305,7 +350,11 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
             yield return new PropSpec(
                 SanitizeProp("Value", enclosingTypeName),
                 ParseTypeName(clr),
-                [AttributeList(SingletonSeparatedList(xmlText))]);
+                [AttributeList(SingletonSeparatedList(xmlText))],
+                Documentation: null,
+                IsOptional: false,
+                IsCollection: false,
+                ClrElementType: clr);
         }
 
         if (type.Particle is { } particle)
@@ -357,7 +406,10 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
             SanitizeProp("Any", enclosingTypeName),
             typeSyntax,
             [xmlAny],
-            particle.Documentation);
+            particle.Documentation,
+            IsOptional: annotate,
+            IsCollection: particle.IsCollection,
+            ClrElementType: "System.Xml.XmlElement");
     }
 
     private static PropSpec ElementProp(
@@ -406,7 +458,10 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
             SanitizeProp(name, enclosingTypeName),
             typeSyntax,
             [xmlEl],
-            particle.Documentation);
+            particle.Documentation,
+            IsOptional: annotate,
+            IsCollection: particle.IsCollection,
+            ClrElementType: clr);
     }
 
     private static T WithSummaryDoc<T>(T node, string? documentation) where T : SyntaxNode
