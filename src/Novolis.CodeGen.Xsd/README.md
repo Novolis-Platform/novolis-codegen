@@ -14,8 +14,8 @@ dotnet add package Novolis.CodeGen.Xsd
 using Novolis.CodeGen.Xml;
 using Novolis.CodeGen.Xsd;
 
-var graph = SchemaGraph.LoadFromDirectory(xsdRoot);
-var trees = WireXmlSerializerProfile.Emit(graph);
+var graph = SchemaGraphBuilder.BuildFromDirectory(xsdRoot);
+var result = new WireXmlSerializerProfile().Emit(graph, new EmitOptions());
 ```
 
 ## Profiles

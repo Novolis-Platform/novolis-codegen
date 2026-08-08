@@ -13,7 +13,7 @@ dotnet add package Novolis.CodeGen.Xml
 ```csharp
 using Novolis.CodeGen.Xml;
 
-var graph = SchemaGraph.LoadFromDirectory(xsdRoot);
+var graph = SchemaGraphBuilder.BuildFromDirectory(xsdRoot);
 ```
 
 ## Capabilities
