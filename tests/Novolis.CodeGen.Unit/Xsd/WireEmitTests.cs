@@ -20,7 +20,8 @@ public sealed class WireEmitTests
         var line = result.Files.Single(f => f.RelativePath.Contains("LineType", StringComparison.Ordinal));
         var text = SyntaxEmitWriter.Format(line.CompilationUnit);
         await Assert.That(text.StartsWith("#nullable", StringComparison.Ordinal)).IsTrue();
-        await Assert.That(text.Contains("decimal?")).IsTrue();
+        await Assert.That(text.Contains("decimal Quantity")).IsTrue();
+        await Assert.That(text.Contains("QuantitySpecified")).IsTrue();
         await Assert.That(text.Contains("BinaryObjectType?")).IsTrue();
 
         var doc = result.Files.Single(f => f.RelativePath.Contains("DocumentType", StringComparison.Ordinal));

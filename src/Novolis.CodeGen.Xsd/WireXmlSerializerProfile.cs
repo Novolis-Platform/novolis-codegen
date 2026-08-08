@@ -196,6 +196,19 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
 
             prop = WithPropertyInitializer(prop, p);
             classMembers.Add(WithSummaryDoc(prop, p.Documentation));
+
+            if (p.EmitSpecifiedCompanion)
+            {
+                var specified = PropertyDeclaration(ParseTypeName("bool"), p.Name + "Specified")
+                    .AddModifiers(Token(SyntaxKind.PublicKeyword))
+                    .AddAttributeLists(AttributeList(SingletonSeparatedList(Attribute(IdentifierName("XmlIgnore")))))
+                    .AddAccessorListAccessors(
+                        AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
+                            .WithSemicolonToken(Token(SyntaxKind.SemicolonToken)),
+                        AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
+                            .WithSemicolonToken(Token(SyntaxKind.SemicolonToken)));
+                classMembers.Add(specified);
+            }
         }
 
         var cls = WithSummaryDoc(
@@ -271,7 +284,8 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
         string? Documentation = null,
         bool IsOptional = false,
         bool IsCollection = false,
-        string? ClrElementType = null);
+        string? ClrElementType = null,
+        bool EmitSpecifiedCompanion = false);
 
     private static PropertyDeclarationSyntax WithPropertyInitializer(PropertyDeclarationSyntax prop, PropSpec p)
     {
@@ -283,7 +297,7 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
                 .WithSemicolonToken(Token(SyntaxKind.SemicolonToken));
         }
 
-        if (p.IsOptional)
+        if (p.IsOptional || p.EmitSpecifiedCompanion)
             return prop;
 
         var clr = p.ClrElementType;
@@ -305,6 +319,28 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
             or "System.Guid" or "Guid"
             or "System.TimeSpan" or "TimeSpan";
     }
+
+    /// <summary>
+    /// Wire nullability: reference types and collections use <c>?</c>; optional value types stay non-nullable
+    /// and get an <c>XxxSpecified</c> companion (XmlSerializer cannot emit schema-valid optional bool/decimal via <c>T?</c>).
+    /// </summary>
+    private static (TypeSyntax Type, bool AnnotateOptional, bool SpecifiedCompanion) WireAnnotate(
+        string clr,
+        bool optional,
+        bool collection,
+        EmitOptions options)
+    {
+        if (!options.EnableNullable || !optional)
+            return (EmitNullability.ParseAnnotated(clr, optional: false, collection, options.CollectionTypeName), false, false);
+
+        if (collection)
+            return (EmitNullability.ParseAnnotated(clr, optional: true, collection: true, options.CollectionTypeName), true, false);
+
+        if (IsClrValueTypeName(clr))
+            return (ParseTypeName(clr), true, true);
+
+        return (EmitNullability.ParseAnnotated(clr, optional: true, collection: false), true, false);
+    }
     private static IEnumerable<PropSpec> BuildProperties(
         SchemaGraph graph,
         ComplexTypeNode type,
@@ -315,6 +351,7 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
         {
             var clr = ResolveClrType(graph, attr.TypeId, options);
             var optional = options.EnableNullable && !attr.IsRequired;
+            var (typeSyntax, annotateOptional, specified) = WireAnnotate(clr, optional, collection: false, options);
             var xmlAttr = AttributeList(SingletonSeparatedList(
                 Attribute(IdentifierName("XmlAttribute"))
                     .WithArgumentList(AttributeArgumentList(SingletonSeparatedList(
@@ -322,12 +359,13 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
                             LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(attr.Name))))))));
             yield return new PropSpec(
                 SanitizeProp(attr.Name, enclosingTypeName),
-                EmitNullability.ParseAnnotated(clr, optional, collection: false),
+                typeSyntax,
                 [xmlAttr],
                 attr.Documentation,
-                IsOptional: optional,
+                IsOptional: annotateOptional,
                 IsCollection: false,
-                ClrElementType: clr);
+                ClrElementType: clr,
+                EmitSpecifiedCompanion: specified);
         }
 
         if (type.HasSimpleContent || type.BinaryFacet != BinaryFacet.None)
@@ -396,10 +434,11 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
 
     private static PropSpec AnyProp(Particle particle, string enclosingTypeName, EmitOptions options, bool optional)
     {
-        var annotate = options.EnableNullable && optional;
-        TypeSyntax typeSyntax = particle.IsCollection
-            ? EmitNullability.ParseAnnotated("System.Xml.XmlElement", annotate, collection: true, options.CollectionTypeName)
-            : EmitNullability.ParseAnnotated("System.Xml.XmlElement", annotate, collection: false);
+        var (typeSyntax, annotate, _) = WireAnnotate(
+            "System.Xml.XmlElement",
+            optional,
+            particle.IsCollection,
+            options);
 
         var xmlAny = AttributeList(SingletonSeparatedList(Attribute(IdentifierName("XmlAnyElement"))));
         return new PropSpec(
@@ -421,12 +460,7 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
     {
         var name = particle.ElementName ?? "Item";
         var clr = ResolveClrType(graph, particle.TypeId, options);
-        var annotate = options.EnableNullable && optional;
-        var typeSyntax = EmitNullability.ParseAnnotated(
-            clr,
-            annotate,
-            particle.IsCollection,
-            options.CollectionTypeName);
+        var (typeSyntax, annotate, specified) = WireAnnotate(clr, optional, particle.IsCollection, options);
 
         var args = new List<AttributeArgumentSyntax>
         {
@@ -461,7 +495,8 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
             particle.Documentation,
             IsOptional: annotate,
             IsCollection: particle.IsCollection,
-            ClrElementType: clr);
+            ClrElementType: clr,
+            EmitSpecifiedCompanion: specified);
     }
 
     private static T WithSummaryDoc<T>(T node, string? documentation) where T : SyntaxNode
