@@ -160,51 +160,24 @@ public sealed class SchemaSetLoaderAndCoverageTests
     }
 
     [Test]
-    public async Task SchemaNamespaceMapper_MapsUblInvoice()
+    public async Task DefaultNamespaceMapper_UsesLastUriSegment()
     {
-        var ns = SchemaNamespaceMapper.Map("Novolis.Xsd.Ubl", "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2");
-        await Assert.That(ns).IsEqualTo("Novolis.Xsd.Ubl.Invoice");
+        var mapper = new DefaultNamespaceMapper();
+        await Assert.That(mapper.Map("Root", "")).IsEqualTo("Root");
+        await Assert.That(mapper.Map("Root", "urn:novolis:codegen:tiny"))
+            .IsEqualTo("Root.Tiny");
+        await Assert.That(mapper.Map("Root", "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"))
+            .IsEqualTo("Root.2");
+        await Assert.That(mapper.Map("Root", "___"))
+            .IsEqualTo("Root.Generated");
+        await Assert.That(SchemaNamespaceMapper.Map("Root", "urn:novolis:codegen:tiny"))
+            .IsEqualTo("Root.Tiny");
     }
 
     [Test]
-    public async Task SchemaNamespaceMapper_MapsKnownSuffixesAndFallbacks()
+    public async Task DefaultNamespaceMapper_BlankRoot_Throws()
     {
-        const string root = "Root";
-        await Assert.That(SchemaNamespaceMapper.Map(root, "")).IsEqualTo(root);
-        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2"))
-            .IsEqualTo(root + ".CommonExtensionComponents");
-        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:oasis:names:specification:ubl:schema:xsd:CommonSignatureComponents-2"))
-            .IsEqualTo(root + ".CommonSignatureComponents");
-        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:oasis:names:specification:ubl:schema:xsd:SignatureBasicComponents-2"))
-            .IsEqualTo(root + ".SignatureBasicComponents");
-        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:oasis:names:specification:ubl:schema:xsd:SignatureAggregateComponents-2"))
-            .IsEqualTo(root + ".SignatureAggregateComponents");
-        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"))
-            .IsEqualTo(root + ".CommonAggregateComponents");
-        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"))
-            .IsEqualTo(root + ".CommonBasicComponents");
-        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:oasis:names:specification:ubl:schema:xsd:UnqualifiedDataTypes-2"))
-            .IsEqualTo(root + ".UnqualifiedDataTypes");
-        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:oasis:names:specification:ubl:schema:xsd:BaseDocument-2"))
-            .IsEqualTo(root + ".BaseDocument");
-        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:un:unece:uncefact:data:specification:CoreComponentTypeSchemaModule:2"))
-            .IsEqualTo(root + ".CoreComponentTypes");
-        await Assert.That(SchemaNamespaceMapper.Map(root, "http://www.w3.org/2000/09/xmldsig#"))
-            .IsEqualTo(root + ".XmlDsig");
-        await Assert.That(SchemaNamespaceMapper.Map(root, "http://uri.etsi.org/01903/v1.3.2#"))
-            .IsEqualTo(root + ".Xades");
-        await Assert.That(SchemaNamespaceMapper.Map(root, "http://www.unece.org/cefact/namespaces/StandardBusinessDocumentHeader"))
-            .IsEqualTo(root);
-        await Assert.That(SchemaNamespaceMapper.Map(root, "___"))
-            .IsEqualTo(root + ".Generated");
-        await Assert.That(SchemaNamespaceMapper.Map(root, "urn:novolis:codegen:tiny"))
-            .IsEqualTo(root + ".Tiny");
-    }
-
-    [Test]
-    public async Task SchemaNamespaceMapper_BlankRoot_Throws()
-    {
-        await Assert.That(() => SchemaNamespaceMapper.Map("  ", "urn:x"))
+        await Assert.That(() => new DefaultNamespaceMapper().Map("  ", "urn:x"))
             .ThrowsExactly<ArgumentException>();
     }
 }

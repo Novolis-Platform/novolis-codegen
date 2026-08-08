@@ -154,7 +154,8 @@ public static class SchemaGraphBuilder
             binary,
             hasSimple,
             simpleClr,
-            xmlDataType);
+            xmlDataType,
+            SchemaDocumentation.Extract(ct));
     }
 
     private static (bool HasSimple, string? Clr, string? XmlDataType) DetectSimpleContent(
@@ -281,7 +282,8 @@ public static class SchemaGraphBuilder
                 string.IsNullOrEmpty(attr.QualifiedName.Namespace) ? null : attr.QualifiedName.Namespace,
                 typeId,
                 attr.Use == XmlSchemaUse.Required,
-                attr.DefaultValue ?? attr.FixedValue));
+                attr.DefaultValue ?? attr.FixedValue,
+                SchemaDocumentation.Extract(attr)));
         }
 
         return list
@@ -329,7 +331,8 @@ public static class SchemaGraphBuilder
             max,
             qn.Name,
             qn.Namespace,
-            typeId);
+            typeId,
+            documentation: SchemaDocumentation.Extract(el));
     }
 
     private static Particle MapGroup(ParticleKind kind, XmlSchemaGroupBase group, HashSet<XmlQualifiedName> referenced)

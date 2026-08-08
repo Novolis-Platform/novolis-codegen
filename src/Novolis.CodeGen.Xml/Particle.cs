@@ -30,7 +30,8 @@ public sealed class Particle
         string? elementName = null,
         string? elementNamespace = null,
         SchemaTypeId? typeId = null,
-        IReadOnlyList<Particle>? children = null)
+        IReadOnlyList<Particle>? children = null,
+        string? documentation = null)
     {
         Kind = kind;
         MinOccurs = minOccurs;
@@ -39,6 +40,7 @@ public sealed class Particle
         ElementNamespace = elementNamespace;
         TypeId = typeId;
         Children = children ?? Array.Empty<Particle>();
+        Documentation = documentation;
     }
 
     /// <summary>Compositor or element kind.</summary>
@@ -61,6 +63,9 @@ public sealed class Particle
 
     /// <summary>Child particles for compositors.</summary>
     public IReadOnlyList<Particle> Children { get; }
+
+    /// <summary>Summary documentation from XSD annotation when present.</summary>
+    public string? Documentation { get; }
 
     /// <summary>Whether maxOccurs is unbounded.</summary>
     public bool IsUnbounded => MaxOccurs == decimal.MaxValue;

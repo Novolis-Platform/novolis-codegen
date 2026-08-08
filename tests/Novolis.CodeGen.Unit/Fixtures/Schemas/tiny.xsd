@@ -25,8 +25,23 @@
   </xs:complexType>
 
   <xs:complexType name="HeaderType">
+    <xs:annotation>
+      <xs:documentation>
+        <ccts:Component xmlns:ccts="urn:un:unece:uncefact:documentation:2">
+          <ccts:Definition>Document header with currency.</ccts:Definition>
+        </ccts:Component>
+      </xs:documentation>
+    </xs:annotation>
     <xs:sequence>
-      <xs:element name="Title" type="xs:string"/>
+      <xs:element name="Title" type="xs:string">
+        <xs:annotation>
+          <xs:documentation>
+            <ccts:Component xmlns:ccts="urn:un:unece:uncefact:documentation:2">
+              <ccts:Definition>Human-readable title.</ccts:Definition>
+            </ccts:Component>
+          </xs:documentation>
+        </xs:annotation>
+      </xs:element>
       <xs:element name="Note" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
     </xs:sequence>
     <xs:attribute name="currencyID" type="xs:string" use="required"/>

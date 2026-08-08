@@ -1,6 +1,8 @@
 # Novolis.CodeGen.Xsd
 
-Emits C# from a **SchemaGraph** using Roslyn `SyntaxFactory` (no CodeDom).
+Public face for **SchemaGraph → C#**: choose a profile, mold via `EmitOptions` / hooks, write sources.
+
+Orchestration across many regen steps (fingerprint skip, `result.json`) stays in `Novolis.CodeGen.Pipeline` — implement `IPipelineStep` that calls `XsdCodegen.Emit`.
 
 ## Install
 
@@ -14,12 +16,37 @@ dotnet add package Novolis.CodeGen.Xsd
 using Novolis.CodeGen.Xml;
 using Novolis.CodeGen.Xsd;
 
-var graph = SchemaGraphBuilder.BuildFromDirectory(xsdRoot);
-var result = new WireXmlSerializerProfile().Emit(graph, new EmitOptions());
+var result = XsdCodegen.EmitFromDirectory(
+    schemaRoot,
+    new WireXmlSerializerProfile(),
+    new EmitOptions
+    {
+        RootNamespace = "Acme.Schemas",
+        // DefaultNamespaceMapper is schema-agnostic; inject your own for product suffixes.
+        NamespaceMapper = new DefaultNamespaceMapper(),
+        DocumentRootInterfaceName = "IDocument",
+        Hooks =
+        [
+            // Post-emit: records↔classes, extra base types, renames, …
+            // new MyEmitHook()
+        ]
+    });
 ```
+
+## Mold points (`EmitOptions`)
+
+| Option | Role |
+|--------|------|
+| `NamespaceMapper` | XML URI → C# namespace (default: last URI segment) |
+| `DocumentRootInterfaceName` | Shared interface on Wire document roots |
+| `SpineInterfaceName` + `SpineDocumentRootNames` | Shared Base spine over named document roots |
+| `StripEmbeddedPolicy` | BinaryFacet → metadata-only vs omit |
+| `Hooks` | Ordered `IXsdEmitHook` transforms after the profile emits |
+
+Product conventions (UBL CBC suffixes, SBDH at package root, Invoice/CreditNote/Reminder spine) live in **consumers** (e.g. `Novolis.Xsd.Generator`), not in this package.
 
 ## Profiles
 
 - **WireXmlSerializerProfile** — `partial class` + XmlSerializer attributes + interfaces
-- **LeanRecordsProfile** — records without embedded `byte[]` (BinaryFacet → omit / BlobRef)
-- **StripEmbeddedBaseProfile** — `*Base` records + `I*Base` interfaces; `BinaryObjectRef` metadata only; optional `IBillingDocumentBase` spine for Invoice/CreditNote/Reminder
+- **LeanRecordsProfile** — records without embedded `byte[]`
+- **StripEmbeddedBaseProfile** — `*Base` records + `I*Base`; optional shared spine when roots are listed

@@ -8,18 +8,14 @@ using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 namespace Novolis.CodeGen.Xsd;
 
 /// <summary>
-/// Emits StripEmbedded Base records + interfaces (<c>InvoiceBase</c> / <c>IInvoiceBase</c>),
+/// Emits StripEmbedded Base records + interfaces (<c>*Base</c> / <c>I*Base</c>),
 /// rewriting BinaryFacet embeddings to metadata-only <c>BinaryObjectRef</c> records.
+/// Optional shared spine via <see cref="EmitOptions.SpineInterfaceName"/> + <see cref="EmitOptions.SpineDocumentRootNames"/>.
 /// </summary>
 public sealed class StripEmbeddedBaseProfile : IEmitProfile
 {
     /// <inheritdoc />
     public string Name => "StripEmbeddedBase";
-
-    private static readonly HashSet<string> BillingDocRootNames = new(StringComparer.Ordinal)
-    {
-        "Invoice", "CreditNote", "Reminder"
-    };
 
     private static readonly FrozenDictionary<string, string> XsdBuiltins =
         new Dictionary<string, string>(StringComparer.Ordinal)
@@ -84,18 +80,19 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
             propsByType[type.Id] = props;
         }
 
-        string? spineName = options.BillingSpineInterfaceName;
+        string? spineName = options.SpineInterfaceName;
+        var spineRoots = options.SpineDocumentRootNames;
         PropSpec[]? spineProps = null;
-        if (!string.IsNullOrEmpty(spineName))
+        if (!string.IsNullOrEmpty(spineName) && spineRoots is { Count: > 0 })
         {
-            var billingRoots = emitTypes
+            var spineDocTypes = emitTypes
                 .Where(t => rootTypeIds.Contains(t.Id)
                             && rootLocalByType.TryGetValue(t.Id, out var ln)
-                            && BillingDocRootNames.Contains(ln))
+                            && spineRoots.Contains(ln))
                 .ToArray();
-            if (billingRoots.Length >= 2)
+            if (spineDocTypes.Length >= 2)
             {
-                spineProps = ComputeIntersection(billingRoots.Select(t => propsByType[t.Id]).ToArray());
+                spineProps = ComputeIntersection(spineDocTypes.Select(t => propsByType[t.Id]).ToArray());
                 files.Add(new EmittedFile($"{spineName}.g.cs",
                     BuildSpineInterface(options.RootNamespace, spineName!, spineProps)));
             }
@@ -110,7 +107,8 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
             var extendSpine = spineProps is not null
                               && isRoot
                               && rootLocalByType.TryGetValue(type.Id, out var docName)
-                              && BillingDocRootNames.Contains(docName)
+                              && spineRoots is not null
+                              && spineRoots.Contains(docName)
                               && !string.IsNullOrEmpty(spineName);
 
             var cu = BuildTypeUnit(
@@ -137,10 +135,12 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
 
     private static bool IsCollapsibleScalar(ComplexTypeNode type)
     {
-        // Simple content CBC/UDT wrappers → collapse to CLR when referenced
+        // Keep types with attributes (currencyID, schemeID, …) as Base records so metadata survives.
+        if (type.Attributes.Count > 0)
+            return false;
         if (type.HasSimpleContent && type.Particle is null)
             return true;
-        if (type.Particle is null && type.Attributes.Count == 0 && type.SimpleContentClrType is not null)
+        if (type.Particle is null && type.SimpleContentClrType is not null)
             return true;
         return false;
     }
@@ -174,6 +174,21 @@ public sealed class StripEmbeddedBaseProfile : IEmitProfile
             if (resolved is null)
                 continue;
             yield return new PropSpec(Sanitize(attr.Name), resolved, !attr.IsRequired);
+        }
+
+        if (type.HasSimpleContent || type.BinaryFacet != BinaryFacet.None)
+        {
+            var clr = type.SimpleContentClrType
+                      ?? (type.BinaryFacet != BinaryFacet.None ? "byte[]" : "string");
+            if (clr == "byte[]")
+            {
+                if (options.StripEmbeddedPolicy != StripEmbeddedPolicy.Omit)
+                    yield return new PropSpec("Value", "BinaryObjectRef", IsOptional: true);
+            }
+            else
+            {
+                yield return new PropSpec("Value", clr, IsOptional: false);
+            }
         }
 
         if (type.Particle is { } particle)

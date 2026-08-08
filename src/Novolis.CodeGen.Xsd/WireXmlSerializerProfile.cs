@@ -69,7 +69,7 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
 
         foreach (var type in simple)
         {
-            var ns = SchemaNamespaceMapper.Map(options.RootNamespace, type.Id.NamespaceName);
+            var ns = options.NamespaceMapper.Map(options.RootNamespace, type.Id.NamespaceName);
             var cu = BuildSimpleType(type, ns);
             files.Add(new EmittedFile($"{SafePath(ns, type.CSharpName)}.g.cs", cu));
         }
@@ -77,7 +77,7 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
         foreach (var type in complex)
         {
             rootByType.TryGetValue(type.Id, out var rootEl);
-            var ns = SchemaNamespaceMapper.Map(options.RootNamespace, type.Id.NamespaceName);
+            var ns = options.NamespaceMapper.Map(options.RootNamespace, type.Id.NamespaceName);
             var cu = BuildComplexType(graph, type, options, ns, rootEl);
             files.Add(new EmittedFile($"{SafePath(ns, type.CSharpName)}.g.cs", cu));
         }
@@ -145,18 +145,22 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
         var properties = DeduplicatePropertyNames(BuildProperties(graph, type, options, className).ToArray(), className);
 
         var ifaceMembers = properties
-            .Select(p => (MemberDeclarationSyntax)PropertyDeclaration(p.Type, p.Name)
-                .AddModifiers(Token(SyntaxKind.PublicKeyword))
-                .AddAccessorListAccessors(
-                    AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
-                        .WithSemicolonToken(Token(SyntaxKind.SemicolonToken)),
-                    AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
-                        .WithSemicolonToken(Token(SyntaxKind.SemicolonToken))))
+            .Select(p => WithSummaryDoc(
+                (MemberDeclarationSyntax)PropertyDeclaration(p.Type, p.Name)
+                    .AddModifiers(Token(SyntaxKind.PublicKeyword))
+                    .AddAccessorListAccessors(
+                        AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
+                            .WithSemicolonToken(Token(SyntaxKind.SemicolonToken)),
+                        AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
+                            .WithSemicolonToken(Token(SyntaxKind.SemicolonToken))),
+                p.Documentation))
             .ToArray();
 
-        var iface = InterfaceDeclaration(ifaceName)
-            .AddModifiers(Token(SyntaxKind.PublicKeyword))
-            .WithMembers(List(ifaceMembers));
+        var iface = WithSummaryDoc(
+            InterfaceDeclaration(ifaceName)
+                .AddModifiers(Token(SyntaxKind.PublicKeyword))
+                .WithMembers(List(ifaceMembers)),
+            type.Documentation);
 
         var classBases = new List<BaseTypeSyntax> { SimpleBaseType(IdentifierName(ifaceName)) };
         if (rootElement is not null && options.DocumentRootInterfaceName is { } docIface)
@@ -184,14 +188,16 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
             if (p.XmlAttributes.Count > 0)
                 prop = prop.WithAttributeLists(List(p.XmlAttributes));
 
-            classMembers.Add(prop);
+            classMembers.Add(WithSummaryDoc(prop, p.Documentation));
         }
 
-        var cls = ClassDeclaration(className)
-            .AddModifiers(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.PartialKeyword))
-            .WithAttributeLists(List(classAttrs))
-            .WithBaseList(BaseList(SeparatedList(classBases)))
-            .WithMembers(List(classMembers));
+        var cls = WithSummaryDoc(
+            ClassDeclaration(className)
+                .AddModifiers(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.PartialKeyword))
+                .WithAttributeLists(List(classAttrs))
+                .WithBaseList(BaseList(SeparatedList(classBases)))
+                .WithMembers(List(classMembers)),
+            type.Documentation);
 
         return CompilationUnit()
             .AddUsings(
@@ -248,7 +254,11 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
                 IdentifierName("Namespace"),
                 LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(namespaceName))));
 
-    private sealed record PropSpec(string Name, TypeSyntax Type, List<AttributeListSyntax> XmlAttributes);
+    private sealed record PropSpec(
+        string Name,
+        TypeSyntax Type,
+        List<AttributeListSyntax> XmlAttributes,
+        string? Documentation = null);
 
     private static IEnumerable<PropSpec> BuildProperties(
         SchemaGraph graph,
@@ -264,7 +274,11 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
                     .WithArgumentList(AttributeArgumentList(SingletonSeparatedList(
                         AttributeArgument(
                             LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(attr.Name))))))));
-            yield return new PropSpec(SanitizeProp(attr.Name, enclosingTypeName), ParseTypeName(clr), [xmlAttr]);
+            yield return new PropSpec(
+                SanitizeProp(attr.Name, enclosingTypeName),
+                ParseTypeName(clr),
+                [xmlAttr],
+                attr.Documentation);
         }
 
         if (type.HasSimpleContent || type.BinaryFacet != BinaryFacet.None)
@@ -329,7 +343,11 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
             : ParseTypeName("System.Xml.XmlElement");
 
         var xmlAny = AttributeList(SingletonSeparatedList(Attribute(IdentifierName("XmlAnyElement"))));
-        return new PropSpec(SanitizeProp("Any", enclosingTypeName), typeSyntax, [xmlAny]);
+        return new PropSpec(
+            SanitizeProp("Any", enclosingTypeName),
+            typeSyntax,
+            [xmlAny],
+            particle.Documentation);
     }
 
     private static PropSpec ElementProp(
@@ -376,8 +394,27 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
             Attribute(IdentifierName("XmlElement"))
                 .WithArgumentList(AttributeArgumentList(SeparatedList(args)))));
 
-        return new PropSpec(SanitizeProp(name, enclosingTypeName), typeSyntax, [xmlEl]);
+        return new PropSpec(
+            SanitizeProp(name, enclosingTypeName),
+            typeSyntax,
+            [xmlEl],
+            particle.Documentation);
     }
+
+    private static T WithSummaryDoc<T>(T node, string? documentation) where T : SyntaxNode
+    {
+        if (string.IsNullOrWhiteSpace(documentation))
+            return node;
+
+        var escaped = EscapeXmlDoc(documentation);
+        return node.WithLeadingTrivia(ParseLeadingTrivia($"/// <summary>{escaped}</summary>\r\n"));
+    }
+
+    private static string EscapeXmlDoc(string text) =>
+        text
+            .Replace("&", "&amp;", StringComparison.Ordinal)
+            .Replace("<", "&lt;", StringComparison.Ordinal)
+            .Replace(">", "&gt;", StringComparison.Ordinal);
 
     private static string? TryXmlDataTypeForBuiltin(SchemaTypeId? typeId)
     {
@@ -413,17 +450,17 @@ public sealed class WireXmlSerializerProfile : IEmitProfile
 
         if (graph.SimpleById.TryGetValue(typeId.Value, out var simple))
         {
-            var typeNs = SchemaNamespaceMapper.Map(options.RootNamespace, simple.Id.NamespaceName);
+            var typeNs = options.NamespaceMapper.Map(options.RootNamespace, simple.Id.NamespaceName);
             return "global::" + typeNs + "." + simple.CSharpName;
         }
 
         if (graph.ComplexById.TryGetValue(typeId.Value, out var complex))
         {
-            var typeNs = SchemaNamespaceMapper.Map(options.RootNamespace, complex.Id.NamespaceName);
+            var typeNs = options.NamespaceMapper.Map(options.RootNamespace, complex.Id.NamespaceName);
             return "global::" + typeNs + "." + complex.CSharpName;
         }
 
-        var fallbackNs = SchemaNamespaceMapper.Map(options.RootNamespace, typeId.Value.NamespaceName);
+        var fallbackNs = options.NamespaceMapper.Map(options.RootNamespace, typeId.Value.NamespaceName);
         return "global::" + fallbackNs + "." + SanitizeProp(typeId.Value.LocalName);
     }
 

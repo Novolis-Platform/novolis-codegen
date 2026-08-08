@@ -17,6 +17,9 @@ public sealed class SchemaGraphBuilderCoverageTests
         var graph = SchemaGraphBuilder.BuildFromFiles([Path.Combine(FixturesDir, "tiny.xsd")]);
         var header = graph.ComplexById[new SchemaTypeId("urn:novolis:codegen:tiny", "HeaderType")];
         await Assert.That(header.Attributes.Any(a => a.Name == "currencyID" && a.IsRequired)).IsTrue();
+        await Assert.That(header.Documentation).IsEqualTo("Document header with currency.");
+        var title = header.Particle!.Children.Single(c => c.ElementName == "Title");
+        await Assert.That(title.Documentation).IsEqualTo("Human-readable title.");
 
         var doc = graph.ComplexById[new SchemaTypeId("urn:novolis:codegen:tiny", "DocumentType")];
         await Assert.That(doc.Particle!.Children.Any(c => c.Kind == ParticleKind.Choice)).IsTrue();

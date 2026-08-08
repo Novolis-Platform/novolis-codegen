@@ -8,7 +8,15 @@
 
 # Novolis.CodeGen.Pipeline
 
-Linear step pipeline with fingerprinted skip detection, `step.log`, and `result.json` caching.
+Linear **step orchestration** kernel: fingerprinted skip detection, `step.log`, and `result.json` caching.
+
+This package is schema-agnostic. It does **not** emit XSD/C# — pair it with `Novolis.CodeGen.Xsd` (`XsdCodegen.Emit` inside an `IPipelineStep`) or binding hosts (raylib, etc.).
+
+| Concern | Package |
+|---------|---------|
+| Skip/cache multi-step regen | **Pipeline** (this) |
+| SchemaGraph → C# profiles + mold hooks | `Novolis.CodeGen.Xsd` |
+| Load / filter XSD → SchemaGraph | `Novolis.CodeGen.Xml` |
 
 ## Install
 
@@ -36,6 +44,7 @@ Steps declare `InputPaths` and `ExpectedOutputPaths` for `StepSkipEvaluator` to 
 
 | Package | When to use |
 |---------|-------------|
+| `Novolis.CodeGen.Xsd` | XSD SchemaGraph emit (`XsdCodegen`) from a pipeline step |
 | `Novolis.CodeGen.Bindings` | Binding emit steps inside codegen pipelines |
 
 ## More documentation
@@ -46,4 +55,3 @@ Steps declare `InputPaths` and `ExpectedOutputPaths` for `StepSkipEvaluator` to 
 ## Support
 
 Pre-release platform library. Public API is fully documented with strict XML (`CS1591` enforced).
-

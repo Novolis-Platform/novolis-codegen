@@ -9,13 +9,15 @@ public sealed class AttributeDecl
         string? namespaceName,
         SchemaTypeId? typeId,
         bool isRequired,
-        string? defaultValue = null)
+        string? defaultValue = null,
+        string? documentation = null)
     {
         Name = name;
         NamespaceName = namespaceName;
         TypeId = typeId;
         IsRequired = isRequired;
         DefaultValue = defaultValue;
+        Documentation = documentation;
     }
 
     /// <summary>Local attribute name.</summary>
@@ -32,4 +34,7 @@ public sealed class AttributeDecl
 
     /// <summary>Default value if any.</summary>
     public string? DefaultValue { get; }
+
+    /// <summary>Summary documentation from XSD annotation when present.</summary>
+    public string? Documentation { get; }
 }

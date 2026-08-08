@@ -38,6 +38,16 @@ public sealed class WireEmitTests
     }
 
     [Test]
+    public async Task Emit_IncludesCctsDefinitionSummaries()
+    {
+        var (result, _) = EmitTiny();
+        var header = result.Files.Single(f => f.RelativePath.Contains("HeaderType", StringComparison.Ordinal));
+        var text = SyntaxEmitWriter.Format(header.CompilationUnit);
+        await Assert.That(text).Contains("/// <summary>Document header with currency.</summary>");
+        await Assert.That(text).Contains("/// <summary>Human-readable title.</summary>");
+    }
+
+    [Test]
     public async Task NoTrailingSemicolonDefect_PropertyBlocksAreValid()
     {
         var (result, _) = EmitTiny();

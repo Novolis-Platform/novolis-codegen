@@ -85,10 +85,14 @@ public sealed class StripEmbeddedBaseEmitTests
     private static EmitResult EmitBilling()
     {
         var graph = SchemaGraphBuilder.BuildFromFiles([Path.Combine(FixturesDir, "billing.xsd")]);
-        return new StripEmbeddedBaseProfile().Emit(graph, new EmitOptions
+        return XsdCodegen.Emit(new StripEmbeddedBaseProfile(), graph, new EmitOptions
         {
             RootNamespace = "Billing.Base",
-            BillingSpineInterfaceName = "IBillingDocumentBase",
+            SpineInterfaceName = "IBillingDocumentBase",
+            SpineDocumentRootNames = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "Invoice", "CreditNote", "Reminder"
+            },
             StripEmbeddedPolicy = StripEmbeddedPolicy.MetadataOnly,
             OneFilePerType = true
         });

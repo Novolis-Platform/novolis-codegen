@@ -14,7 +14,8 @@ public sealed class ComplexTypeNode
         BinaryFacet binaryFacet,
         bool hasSimpleContent = false,
         string? simpleContentClrType = null,
-        string? simpleContentXmlDataType = null)
+        string? simpleContentXmlDataType = null,
+        string? documentation = null)
     {
         Id = id;
         CSharpName = csharpName;
@@ -26,6 +27,7 @@ public sealed class ComplexTypeNode
         HasSimpleContent = hasSimpleContent;
         SimpleContentClrType = simpleContentClrType;
         SimpleContentXmlDataType = simpleContentXmlDataType;
+        Documentation = documentation;
     }
 
     /// <summary>Type identity.</summary>
@@ -57,4 +59,7 @@ public sealed class ComplexTypeNode
 
     /// <summary>Optional <c>XmlText(DataType=…)</c> lexical hint (<c>date</c>, <c>time</c>, <c>dateTime</c>, …).</summary>
     public string? SimpleContentXmlDataType { get; }
+
+    /// <summary>Summary documentation from XSD annotation (<c>ccts:Definition</c> or plain text).</summary>
+    public string? Documentation { get; }
 }

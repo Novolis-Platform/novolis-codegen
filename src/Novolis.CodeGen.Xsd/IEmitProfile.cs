@@ -1,4 +1,3 @@
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Novolis.CodeGen.Xml;
 
@@ -14,13 +13,20 @@ public interface IEmitProfile
     EmitResult Emit(SchemaGraph graph, EmitOptions options);
 }
 
-/// <summary>Options shared by emit profiles.</summary>
+/// <summary>Options shared by emit profiles — mold type shape, namespaces, spines, and hooks.</summary>
 public sealed class EmitOptions
 {
     /// <summary>Root namespace for generated types.</summary>
     public required string RootNamespace { get; init; }
 
-    /// <summary>When set, document root types implement this interface name (e.g. <c>IUblDocument</c>).</summary>
+    /// <summary>
+    /// Maps XML schema namespaces to C# namespaces under <see cref="RootNamespace"/>.
+    /// Defaults to <see cref="DefaultNamespaceMapper"/> (schema-agnostic).
+    /// Product hosts (e.g. UBL) supply a custom <see cref="INamespaceMapper"/>.
+    /// </summary>
+    public INamespaceMapper NamespaceMapper { get; init; } = new DefaultNamespaceMapper();
+
+    /// <summary>When set, document root types implement this interface name.</summary>
     public string? DocumentRootInterfaceName { get; init; }
 
     /// <summary>CLR collection type for repeating particles (default <c>System.Collections.ObjectModel.Collection</c>).</summary>
@@ -36,10 +42,27 @@ public sealed class EmitOptions
     public StripEmbeddedPolicy StripEmbeddedPolicy { get; init; } = StripEmbeddedPolicy.MetadataOnly;
 
     /// <summary>
-    /// When set, document-root Base interfaces extend this shared spine interface
-    /// (property intersection of all document roots in the emit set).
+    /// When set with <see cref="SpineDocumentRootNames"/>, document-root Base interfaces extend this
+    /// shared spine (property intersection of those roots).
     /// </summary>
-    public string? BillingSpineInterfaceName { get; init; }
+    public string? SpineInterfaceName { get; init; }
+
+    /// <summary>
+    /// Document local names that participate in the shared spine (e.g. Invoice/CreditNote/Reminder).
+    /// Required for spine emission when <see cref="SpineInterfaceName"/> is set.
+    /// </summary>
+    public IReadOnlySet<string>? SpineDocumentRootNames { get; init; }
+
+    /// <summary>Obsolete alias for <see cref="SpineInterfaceName"/>.</summary>
+    [Obsolete("Use SpineInterfaceName.")]
+    public string? BillingSpineInterfaceName
+    {
+        get => SpineInterfaceName;
+        init => SpineInterfaceName = value;
+    }
+
+    /// <summary>Optional post-emit hooks applied by <see cref="XsdCodegen.Emit"/>.</summary>
+    public IReadOnlyList<IXsdEmitHook>? Hooks { get; init; }
 }
 
 /// <summary>How binary embeddings are handled in Base/Lean emit.</summary>

@@ -291,7 +291,11 @@ public sealed class EmitProfileBranchCoverageTests
         {
             RootNamespace = "Billing.Omit",
             StripEmbeddedPolicy = StripEmbeddedPolicy.Omit,
-            BillingSpineInterfaceName = "IBillingDocumentBase"
+            SpineInterfaceName = "IBillingDocumentBase",
+            SpineDocumentRootNames = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "Invoice", "CreditNote", "Reminder"
+            }
         });
 
         var text = string.Join("\n", result.Files.Select(f => SyntaxEmitWriter.Format(f.CompilationUnit)));
@@ -315,7 +319,11 @@ public sealed class EmitProfileBranchCoverageTests
         {
             RootNamespace = "Tiny.Base",
             IncludeTypeIds = new HashSet<SchemaTypeId> { docId },
-            BillingSpineInterfaceName = "IBillingDocumentBase"
+            SpineInterfaceName = "IBillingDocumentBase",
+            SpineDocumentRootNames = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "Invoice", "CreditNote", "Reminder"
+            }
         });
 
         await Assert.That(result.Files.Any(f => f.RelativePath == "IBillingDocumentBase.g.cs")).IsFalse();
@@ -492,7 +500,11 @@ public sealed class EmitProfileBranchCoverageTests
         var meta = new StripEmbeddedBaseProfile().Emit(graph, new EmitOptions
         {
             RootNamespace = "Strip.Hand",
-            BillingSpineInterfaceName = "IBillingDocumentBase",
+            SpineInterfaceName = "IBillingDocumentBase",
+            SpineDocumentRootNames = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "Invoice", "CreditNote", "Reminder"
+            },
             StripEmbeddedPolicy = StripEmbeddedPolicy.MetadataOnly
         });
         var metaText = string.Join("\n", meta.Files.Select(f => SyntaxEmitWriter.Format(f.CompilationUnit)));
@@ -508,6 +520,8 @@ public sealed class EmitProfileBranchCoverageTests
         await Assert.That(metaText.Contains("Item")).IsTrue();
         await Assert.That(metaText.Contains("IReadOnlyList<string>")).IsTrue();
         await Assert.That(metaText.Contains("int?")).IsTrue();
+        // Attributed CBC wrappers (listID / currencyID) stay as Base types.
+        await Assert.That(meta.Files.Any(f => f.RelativePath.Contains("CodeBase", StringComparison.Ordinal))).IsTrue();
 
         var omit = new StripEmbeddedBaseProfile().Emit(graph, new EmitOptions
         {
