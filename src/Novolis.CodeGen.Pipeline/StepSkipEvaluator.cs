@@ -61,17 +61,32 @@ public static class StepSkipEvaluator
 
     private static bool InputsMatch(IReadOnlyDictionary<string, string> previous, Dictionary<string, string> current)
     {
-        if (previous.Count != current.Count)
+        var previousFiltered = FilterIntermediates(previous);
+        var currentFiltered = FilterIntermediates(current);
+        if (previousFiltered.Count != currentFiltered.Count)
             return false;
 
-        foreach (var (key, value) in current)
+        foreach (var (key, value) in currentFiltered)
         {
-            if (!previous.TryGetValue(key, out var prev) ||
+            if (!previousFiltered.TryGetValue(key, out var prev) ||
                 !string.Equals(prev, value, StringComparison.OrdinalIgnoreCase))
                 return false;
         }
 
         return true;
+    }
+
+    private static Dictionary<string, string> FilterIntermediates(IReadOnlyDictionary<string, string> map)
+    {
+        var filtered = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (key, value) in map)
+        {
+            if (StepFileFingerprint.IsBuildIntermediate(key))
+                continue;
+            filtered[key] = value;
+        }
+
+        return filtered;
     }
 
     private static string ResolveOutputPath(PipelineContext context, string stepId, string recordedPath)

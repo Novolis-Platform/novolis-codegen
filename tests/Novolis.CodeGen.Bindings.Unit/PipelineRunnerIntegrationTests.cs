@@ -56,10 +56,16 @@ public sealed class PipelineRunnerIntegrationTests
             });
 
             var runner = new PipelineRunner([step], layout);
+            var beforeJson = File.ReadAllText(Path.Combine(stepDir, "result.json"));
+            File.WriteAllText(Path.Combine(stepDir, "step.log"), "# previous-success\n");
+            var beforeLog = File.ReadAllText(Path.Combine(stepDir, "step.log"));
+
             var exit = await runner.RunProfileAsync(["emit"], force: false);
             await Assert.That(exit).IsEqualTo(0);
             var doc = StepResultWriter.TryRead(stepDir);
-            await Assert.That(doc!.Status).IsEqualTo(StepStatus.Skipped);
+            await Assert.That(doc!.Status).IsEqualTo(StepStatus.Succeeded);
+            await Assert.That(File.ReadAllText(Path.Combine(stepDir, "result.json"))).IsEqualTo(beforeJson);
+            await Assert.That(File.ReadAllText(Path.Combine(stepDir, "step.log"))).IsEqualTo(beforeLog);
         }
         finally
         {

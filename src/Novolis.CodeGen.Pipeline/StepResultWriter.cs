@@ -21,7 +21,10 @@ public static class StepResultWriter
     {
         Directory.CreateDirectory(stepDir);
         var path = Path.Combine(stepDir, "result.json");
-        var json = JsonSerializer.Serialize(document, JsonOptions) + Environment.NewLine;
+        var json = JsonSerializer.Serialize(document, JsonOptions) + "\n";
+        if (File.Exists(path) && File.ReadAllText(path).Replace("\r\n", "\n") == json)
+            return;
+
         File.WriteAllText(path, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 

@@ -54,10 +54,7 @@ public sealed class CodegenEnvironment
     public void WriteAllText(string relativePath, string contents)
     {
         var full = Combine(relativePath);
-        var dir = FileSystem.Path.GetDirectoryName(full);
-        if (!string.IsNullOrEmpty(dir))
-            FileSystem.Directory.CreateDirectory(dir);
-        FileSystem.File.WriteAllText(full, contents, new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        WriteAllTextAbsolute(full, contents);
     }
 
     /// <summary>Writes UTF-8 text to an absolute path, creating parent directories as needed.</summary>
@@ -68,6 +65,12 @@ public sealed class CodegenEnvironment
         var dir = FileSystem.Path.GetDirectoryName(absolutePath);
         if (!string.IsNullOrEmpty(dir))
             FileSystem.Directory.CreateDirectory(dir);
-        FileSystem.File.WriteAllText(absolutePath, contents, new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+        var normalized = contents.Replace("\r\n", "\n");
+        if (FileSystem.File.Exists(absolutePath)
+            && FileSystem.File.ReadAllText(absolutePath).Replace("\r\n", "\n") == normalized)
+            return;
+
+        FileSystem.File.WriteAllText(absolutePath, normalized, new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 }

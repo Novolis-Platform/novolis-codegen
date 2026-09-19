@@ -67,19 +67,14 @@ public static class RoslynEmitWriter<TPhase, TContext>
             unit = hook.Transform(unit, context);
 
         var formatted = formatPolicy == FormatPolicy.NormalizeWhitespace
-            ? unit.NormalizeWhitespace(eol: Environment.NewLine).ToFullString()
+            ? unit.NormalizeWhitespace(eol: "\n").ToFullString()
             : CodegenFormatter.FormatCompilationUnit(unit);
 
-        var outputDirectory = context.Environment.FileSystem.Path.GetDirectoryName(context.OutputPath);
-        if (!string.IsNullOrEmpty(outputDirectory))
-            context.Environment.FileSystem.Directory.CreateDirectory(outputDirectory);
+        formatted = formatted.Replace("\r\n", "\n");
         if (!formatted.EndsWith('\n'))
-            formatted += Environment.NewLine;
+            formatted += "\n";
 
-        context.Environment.FileSystem.File.WriteAllText(
-            context.OutputPath,
-            formatted,
-            new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        context.Environment.WriteAllTextAbsolute(context.OutputPath, formatted);
     }
 }
 
@@ -89,6 +84,6 @@ internal static class CodegenFormatter
     {
         var workspace = new Microsoft.CodeAnalysis.AdhocWorkspace();
         var formatted = Microsoft.CodeAnalysis.Formatting.Formatter.Format(unit, workspace);
-        return formatted.NormalizeWhitespace(eol: Environment.NewLine).ToFullString();
+        return formatted.NormalizeWhitespace(eol: "\n").ToFullString();
     }
 }

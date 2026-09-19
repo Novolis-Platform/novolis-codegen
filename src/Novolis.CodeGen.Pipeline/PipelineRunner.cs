@@ -67,6 +67,19 @@ public sealed class PipelineRunner
     private async Task<int> RunSingleStepAsync(IPipelineStep step, bool force, CancellationToken cancellationToken)
     {
         var stepDir = _layout.StepDir(step.Id);
+        var previous = StepResultWriter.TryRead(stepDir);
+        var skipContext = new PipelineContext
+        {
+            Layout = _layout,
+            Log = TextWriter.Null,
+            Force = force,
+        };
+        if (StepSkipEvaluator.ShouldSkip(step, skipContext, previous, out var skipReason))
+        {
+            Console.WriteLine($"{step.Id}: skipped ({skipReason})");
+            return 0;
+        }
+
         Directory.CreateDirectory(stepDir);
 
         var logPath = Path.Combine(stepDir, "step.log");
@@ -84,25 +97,6 @@ public sealed class PipelineRunner
             Log = logWriter,
             Force = force,
         };
-
-        var previous = StepResultWriter.TryRead(stepDir);
-        if (StepSkipEvaluator.ShouldSkip(step, context, previous, out var skipReason))
-        {
-            var skippedDoc = new StepResultDocument
-            {
-                StepId = step.Id,
-                Status = StepStatus.Skipped,
-                StartedUtc = started,
-                DurationMs = 0,
-                Inputs = StepFileFingerprint.HashFiles(step.InputPaths(context), context.RepoRoot),
-                Outputs = previous?.Outputs ?? [],
-                SkipReason = skipReason,
-            };
-            StepResultWriter.Write(stepDir, skippedDoc);
-            await logWriter.WriteLineAsync($"SKIPPED: {skipReason}");
-            Console.WriteLine($"{step.Id}: skipped ({skipReason})");
-            return 0;
-        }
 
         var sw = Stopwatch.StartNew();
         try

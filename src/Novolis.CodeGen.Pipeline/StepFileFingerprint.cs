@@ -34,6 +34,9 @@ public static class StepFileFingerprint
                 continue;
 
             var rel = Path.GetRelativePath(repoRoot, full).Replace('\\', '/');
+            if (IsBuildIntermediate(rel))
+                continue;
+
             map[rel] = Sha256Hex(full);
         }
 
@@ -71,5 +74,14 @@ public static class StepFileFingerprint
         }
 
         return list;
+    }
+
+    internal static bool IsBuildIntermediate(string relativePath)
+    {
+        var normalized = relativePath.Replace('\\', '/');
+        return normalized.Contains("/obj/", StringComparison.OrdinalIgnoreCase)
+               || normalized.Contains("/bin/", StringComparison.OrdinalIgnoreCase)
+               || normalized.StartsWith("obj/", StringComparison.OrdinalIgnoreCase)
+               || normalized.StartsWith("bin/", StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -35,6 +35,12 @@ public sealed class CodegenEnvironmentTests
             env.WriteAllText("x.txt", "data");
             await Assert.That(env.FileExists("x.txt")).IsTrue();
             await Assert.That(File.ReadAllText(Path.Combine(temp.FullName, "x.txt"))).IsEqualTo("data");
+
+            var path = Path.Combine(temp.FullName, "x.txt");
+            var stamp = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            File.SetLastWriteTimeUtc(path, stamp);
+            env.WriteAllText("x.txt", "data");
+            await Assert.That(File.GetLastWriteTimeUtc(path)).IsEqualTo(stamp);
         }
         finally
         {

@@ -19,6 +19,14 @@ public sealed class PipelineStepTests
             await Assert.That(map.Count).IsEqualTo(1);
             await Assert.That(map["input.txt"]).IsEqualTo(hex);
 
+            var objDir = Path.Combine(temp.FullName, "obj", "Debug");
+            Directory.CreateDirectory(objDir);
+            var objFile = Path.Combine(objDir, "AssemblyInfo.cs");
+            await File.WriteAllTextAsync(objFile, "// generated");
+            var withObj = StepFileFingerprint.HashFiles(["input.txt", "obj/Debug/AssemblyInfo.cs"], temp.FullName);
+            await Assert.That(withObj.ContainsKey("obj/Debug/AssemblyInfo.cs")).IsFalse();
+            await Assert.That(withObj["input.txt"]).IsEqualTo(hex);
+
             var outputs = StepFileFingerprint.DescribeOutputs(["input.txt"], temp.FullName);
             await Assert.That(outputs.Count).IsEqualTo(1);
             await Assert.That(outputs[0].Bytes).IsEqualTo(new FileInfo(input).Length);
