@@ -17,7 +17,7 @@ public sealed class ManifestFingerprintTests
             "raylib",
             EmptyPolicy,
             [new InteropStructSpec("Color", [new InteropFieldSpec("R", "byte")])],
-            [new InteropImportSpec("InitWindow", InteropTemplate.VoidVoid)]);
+            [new InteropImportSpec("InitWindow", NativeSignature.Create(NativeType.Void))]);
 
         var b = new InteropExportsFragment(
             "raylib",
@@ -27,7 +27,7 @@ public sealed class ManifestFingerprintTests
             "raylib",
             EmptyPolicy,
             [new InteropStructSpec("Color", [new InteropFieldSpec("R", "byte")])],
-            [new InteropImportSpec("InitWindow", InteropTemplate.VoidVoid)]);
+            [new InteropImportSpec("InitWindow", NativeSignature.Create(NativeType.Void))]);
 
         await Assert.That(ManifestFingerprint.CanonicalText(a)).IsEqualTo(ManifestFingerprint.CanonicalText(b));
         await Assert.That(a.Sha256Hex()).IsEqualTo(b.Sha256Hex());
@@ -37,9 +37,9 @@ public sealed class ManifestFingerprintTests
     public async Task Sha256Hex_changes_when_import_set_differs()
     {
         var a = new ShimExportsFragment("shim", 1, null, null, "module.so",
-            [new ShimExportSpec("A", "void_void")]);
+            [new ShimExportSpec("A", NativeSignature.Create(NativeType.Void))]);
         var b = new ShimExportsFragment("shim", 1, null, null, "module.so",
-            [new ShimExportSpec("B", "void_void")]);
+            [new ShimExportSpec("B", NativeSignature.Create(NativeType.Void))]);
         await Assert.That(a.Sha256Hex()).IsNotEqualTo(b.Sha256Hex());
     }
 
@@ -85,18 +85,18 @@ public sealed class ManifestSemanticEqualityTests
     {
         var a = new InteropExportsFragment("id", 1, null, null, "dll",
             new InteropPolicySpec([], [], null, false), [],
-            [new InteropImportSpec("A", "t"), new InteropImportSpec("B", "t")]);
+            [new InteropImportSpec("A", NativeSignature.Create(NativeType.Void)), new InteropImportSpec("B", NativeSignature.Create(NativeType.Void))]);
         var b = new InteropExportsFragment("id", 1, null, null, "dll",
             new InteropPolicySpec([], [], null, false), [],
-            [new InteropImportSpec("B", "t"), new InteropImportSpec("A", "t")]);
+            [new InteropImportSpec("B", NativeSignature.Create(NativeType.Void)), new InteropImportSpec("A", NativeSignature.Create(NativeType.Void))]);
         await Assert.That(ManifestSemanticEquality.InteropEquals(a, b)).IsTrue();
     }
 
     [Test]
     public async Task ShimEquals_and_debug_and_facade()
     {
-        var shimA = new ShimExportsFragment("s", 1, null, null, "m.so", [new ShimExportSpec("X", "t")]);
-        var shimB = new ShimExportsFragment("s", 1, null, null, "m.so", [new ShimExportSpec("X", "t")]);
+        var shimA = new ShimExportsFragment("s", 1, null, null, "m.so", [new ShimExportSpec("X", NativeSignature.Create(NativeType.Void))]);
+        var shimB = new ShimExportsFragment("s", 1, null, null, "m.so", [new ShimExportSpec("X", NativeSignature.Create(NativeType.Void))]);
         await Assert.That(ManifestSemanticEquality.ShimEquals(shimA, shimB)).IsTrue();
 
         var sym = new DebugSymbolMapSpec("L", "E", "U", "F");
@@ -140,13 +140,13 @@ public sealed class ManifestSemanticEqualityTests
     public async Task ManifestFingerprint_includes_interop_policy_fields()
     {
         var policy = new InteropPolicySpec(
-            ["void_void"],
+            ["InitWindow"],
             ["InitWindow"],
             "AggressiveInlining",
             true);
         var fragment = new InteropExportsFragment("raylib", 1, null, null, "raylib", policy, [], []);
         var text = ManifestFingerprint.CanonicalText(fragment);
-        await Assert.That(text).Contains("suppressTemplate=void_void");
+        await Assert.That(text).Contains("suppressFunction=InitWindow");
         await Assert.That(text).Contains("neverSuppress=InitWindow");
         await Assert.That(text).Contains("facadeImpl=AggressiveInlining");
         await Assert.That(text).Contains("disableMarshalling=True");
@@ -182,11 +182,11 @@ public sealed class BindingProjectTests
             .AddJob(new BindingEmitJob("core", FragmentKind.InteropExports, "raylib", emitter, target))
             .AddJob(new BindingEmitJob("raygui", FragmentKind.InteropExports, "raygui", emitter, target, Optional: true));
 
-        var without = BindingCodegenExecutor.FilterJobs(project, includeRaygui: false).ToList();
+        var without = BindingCodegenExecutor.FilterJobs(project, includeOptional: false).ToList();
         await Assert.That(without.Count).IsEqualTo(1);
         await Assert.That(without[0].Label).IsEqualTo("core");
 
-        var with = BindingCodegenExecutor.FilterJobs(project, includeRaygui: true).ToList();
+        var with = BindingCodegenExecutor.FilterJobs(project, includeOptional: true).ToList();
         await Assert.That(with.Count).IsEqualTo(2);
     }
 

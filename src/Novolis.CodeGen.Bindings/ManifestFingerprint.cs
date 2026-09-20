@@ -32,6 +32,8 @@ public static class ManifestFingerprint
         sb.Append("interop|").Append(fragment.Id).Append('|').Append(fragment.SchemaVersion).Append('|')
             .Append(fragment.DllName).Append('|');
         AppendPolicy(sb, fragment.Policy);
+        foreach (var usingDirective in (fragment.Usings ?? []).OrderBy(u => u, StringComparer.Ordinal))
+            sb.Append("|using:").Append(usingDirective);
         foreach (var st in fragment.Structs.OrderBy(s => s.Name, StringComparer.Ordinal))
         {
             sb.Append("|struct:").Append(st.Name);
@@ -41,7 +43,8 @@ public static class ManifestFingerprint
 
         foreach (var import in fragment.Imports.OrderBy(i => i.Name, StringComparer.Ordinal))
         {
-            sb.Append("|import:").Append(import.Name).Append(':').Append(import.Template);
+            sb.Append("|import:").Append(import.Name).Append(':');
+            AppendSignature(sb, import.Signature);
             if (import.Description is not null)
                 sb.Append(':').Append(import.Description);
             if (import.SuppressGcTransition is { } suppress)
@@ -54,8 +57,8 @@ public static class ManifestFingerprint
     private static void AppendPolicy(StringBuilder sb, InteropPolicySpec policy)
     {
         sb.Append("policy:");
-        foreach (var template in policy.SuppressGcTransitionByTemplate.OrderBy(t => t, StringComparer.Ordinal))
-            sb.Append("suppressTemplate=").Append(template).Append(';');
+        foreach (var function in policy.SuppressGcTransitionByFunction.OrderBy(t => t, StringComparer.Ordinal))
+            sb.Append("suppressFunction=").Append(function).Append(';');
         foreach (var name in policy.NeverSuppressGcTransition.OrderBy(n => n, StringComparer.Ordinal))
             sb.Append("neverSuppress=").Append(name).Append(';');
         if (policy.FacadeMethodImpl is not null)
@@ -69,8 +72,37 @@ public static class ManifestFingerprint
         sb.Append("shim|").Append(fragment.Id).Append('|').Append(fragment.SchemaVersion).Append('|')
             .Append(fragment.ModuleFileName).Append('|');
         foreach (var export in fragment.Exports.OrderBy(e => e.Export, StringComparer.Ordinal))
-            sb.Append("|export:").Append(export.Export).Append(':').Append(export.Template);
+        {
+            sb.Append("|export:").Append(export.Export).Append(':');
+            AppendSignature(sb, export.Signature);
+        }
+        foreach (var embeddedType in (fragment.EmbeddedTypes ?? []).OrderBy(t => t.Name, StringComparer.Ordinal))
+        {
+            sb.Append("|embedded:").Append(embeddedType.Name);
+            foreach (var field in embeddedType.Fields)
+                sb.Append(':').Append(field.Name).Append('=').Append(field.ClrType);
+        }
         return sb.ToString();
+    }
+
+    private static void AppendSignature(StringBuilder sb, NativeSignature signature)
+    {
+        AppendType(sb, signature.ReturnType);
+        sb.Append('(');
+        foreach (var parameter in signature.Parameters)
+        {
+            sb.Append(parameter.Name).Append('=').Append(parameter.Modifier).Append(':');
+            AppendType(sb, parameter.Type);
+            sb.Append(';');
+        }
+        sb.Append(')');
+    }
+
+    private static void AppendType(StringBuilder sb, NativeType type)
+    {
+        sb.Append(type.Kind);
+        if (type.ClrTypeName is not null)
+            sb.Append('[').Append(type.ClrTypeName).Append(']');
     }
 
     private static string CanonicalDebug(DebugConfigFragment fragment)

@@ -159,7 +159,7 @@ public sealed class RoslynEmitWriterTests
     static TestEmitContext CreateContext(MockFileSystem fs, string repoRoot, string relativeOutput)
     {
         var fragment = new InteropExportsFragment(
-            "test", 1, null, null, "lib", EmptyPolicy, [], [new InteropImportSpec("Init", InteropTemplate.VoidVoid)]);
+            "test", 1, null, null, "lib", EmptyPolicy, [], [new InteropImportSpec("Init", NativeSignature.Create(NativeType.Void))]);
         return new TestEmitContext
         {
             Environment = new CodegenEnvironment { FileSystem = fs, RepoRoot = repoRoot },

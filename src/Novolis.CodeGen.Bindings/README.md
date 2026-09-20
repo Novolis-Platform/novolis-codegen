@@ -8,7 +8,9 @@
 
 # Novolis.CodeGen.Bindings
 
-Manifest fragments, emit orchestration, and filesystem-backed binding codegen for Novolis consumers.
+Typed C-ABI manifests, shared string emitters, and filesystem-backed binding codegen for Novolis consumers.
+
+The library binds C ABIs: native C libraries and C++ libraries that expose an unmangled `extern "C"` surface (usually through a shim). It does not generate bindings for C++ classes, overloads, exceptions, or ownership models.
 
 ## Install
 
@@ -34,11 +36,23 @@ var manifests = BindingManifestSource.Create(
         DllName: "mylib.dll",
         Policy: new InteropPolicySpec([], [], null, false),
         Structs: [],
-        Imports: [new InteropImportSpec("Init", "void_void")]));
+        Imports:
+        [
+            new InteropImportSpec(
+                "Init",
+                NativeSignature.Create(
+                    NativeType.Void,
+                    new NativeParameter("flags", NativeType.UInt32))),
+        ],
+        Usings: ["Example.Interop"]));
 
-var options = BindingCodegenOptions.Physical("/path/to/repo", manifests);
-// Consumer IBindingCodegenHost implementation calls emitters with options.Environment (IFileSystem).
+var options = BindingCodegenOptions.Physical(
+    @"d:\repo",
+    manifests,
+    "dotnet run --project codegen/Example.CodeGen -- generate");
 ```
+
+Use `LibraryImportEmitter` for `InteropExportsFragment`, `DynamicExportsEmitter` for `ShimExportsFragment`, and `FacadeForwardEmitter` for one `FacadeTypesFragment` slice. `NativeSignature` carries parameter names as well as types, so consumer manifests control the emitted C# ABI exactly.
 
 ## Related packages
 

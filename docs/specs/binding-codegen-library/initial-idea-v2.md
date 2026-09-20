@@ -8,11 +8,12 @@
 | Topic | Decision |
 |-------|----------|
 | Parity gate | **T1** AST-normalized equivalence |
-| Milestone | Through **Phase 4** (library + raylib wired) |
+| Milestone | C-ABI emit library wired through Raylib and Audio |
 | Binding model | **L0–L3 stack** with `CompanionDeclaration` |
 | Manifest authority | **C# fragments** defined by the consumer (`Novolis.Raylib.Manifests`) |
 | IO | **IFileSystem** via `CodegenEnvironment` (tests use `MockFileSystem`) |
-| Inlining | Emitter owns inlining; hooks for XML docs + EndDrawing |
+| Inlining | Shared façade emitter owns expression-body inlining; hooks retain XML docs + EndDrawing behavior |
+| Native scope | C ABI: C libraries and C++ `extern "C"` shims; no C++ class bindings |
 
 ## L0–L3 binding stack
 
@@ -30,8 +31,8 @@ Merge points must include **L2 companion declarations** for validation; façades
 | Package | Contents |
 |---------|----------|
 | `Novolis.CodeGen.Pipeline` | `IPipelineStep`, `PipelineRunner`, skip/cache, `result.json` |
-| `Novolis.CodeGen.Bindings` | Fragments, `IBindingManifestSource`, `IBindingEmitter`, `BindingCodegenExecutor`, `CodegenEnvironment` |
-| `Novolis.CodeGen.Bindings.Roslyn` | `ICodegenHook`, `RoslynEmitWriter`, `CompilationUnitComparer` |
+| `Novolis.CodeGen.Bindings` | Typed `NativeSignature` fragments, C-ABI emitters, `IBindingEmitter`, `BindingCodegenExecutor`, `CodegenEnvironment` |
+| `Novolis.CodeGen.Bindings.Roslyn` | `ICodegenHook`, default `BindingCodegenHost`, `RoslynEmitWriter`, `CompilationUnitComparer` |
 
 ## Consumer manifests (C#)
 
@@ -49,8 +50,10 @@ Manifest fingerprints use `ManifestFingerprint.Sha256Hex(fragment)` — not JSON
 ## API surface
 
 - `IPipelineLayout` — injectable paths (raylib: `RaylibPipelineLayout`)
-- `IBindingEmitter` — domain string emitters registered per `EmitStrategy`
-- `IBindingCodegenHost` — consumer entry (`RaylibBindingCodegenHost`)
+- `NativeSignature`, `NativeType`, `NativeParameter` — typed C ABI return and named parameter metadata
+- `LibraryImportEmitter`, `DynamicExportsEmitter`, `FacadeForwardEmitter` — shared string emitters registered per `EmitStrategy`
+- `BindingCodegenHost<TPhase, TContext>` — default consumer job runner over `RoslynEmitWriter`
+- `IBindingCodegenHost` — consumer entry (`RaylibBindingCodegenHost`, `AudioBindingCodegenHost`)
 - `BindingEmitContext` — **only** config channel for hooks (no disk reads)
 - `CompanionDeclaration` — required hand-written files per stack
 - `CodegenEnvironment` — `IFileSystem` + repo root for all codegen IO
@@ -65,9 +68,9 @@ Manifest fingerprints use `ManifestFingerprint.Sha256Hex(fragment)` — not JSON
 
 14 generated outputs — see [summary.md](./summary.md#parity-scope-14-generated-files).
 
-## Single codegen host
+## Default codegen host
 
-All entry points delegate to `RaylibBindingCodegenHost`:
+`BindingCodegenHost<TPhase, TContext>` validates companions, filters optional jobs, fingerprints fragments, invokes the selected string emitter, and preserves the existing parse → hook → format → write path. Raylib and Audio hosts only compose jobs, hooks, and consumer-owned verification:
 
 - Pipeline `step_06_codegen`
 - MSBuild `GenerateRaylibBindings`
@@ -75,7 +78,12 @@ All entry points delegate to `RaylibBindingCodegenHost`:
 
 Regenerate hint: `dotnet run --project codegen/Novolis.Raylib.Pipeline -- run generate`
 
+## Implemented consumers
+
+- Raylib uses typed signatures for LibraryImport, ImGui/Raygui dynamic export tables, debug hooks, and one façade job per generated type.
+- Audio uses the same LibraryImport and façade emitters for its nine `na_*` imports. Speech and voice catalogs remain Audio-local.
+
 ## Deferred
 
 - **Phase 6:** Automated façade doc enrichment back into C# manifest sources
-- **Backlog:** NativePack generator, BindingSurface sugar, second consumer
+- **Backlog:** NativePack generator and BindingSurface sugar

@@ -33,14 +33,20 @@ public class BindingEmitContext
 /// <param name="RelativePath">Output path relative to the repository root.</param>
 /// <param name="Namespace">CLR namespace for the generated type.</param>
 /// <param name="AssemblyName">Target assembly name.</param>
-/// <param name="Optional">When <see langword="true"/>, the job may be skipped (for example optional raygui).</param>
+/// <param name="LibraryConstantName">Optional generated constant naming the native library.</param>
+/// <param name="TypeSummary">Optional generated type XML summary.</param>
+/// <param name="StructSummary">Optional generated struct XML summary.</param>
+/// <param name="FacadeMethodImpl">Optional method implementation policy for façade forwards.</param>
 public sealed record EmitTarget(
     string ClassName,
     EmitStrategy Strategy,
     string RelativePath,
     string Namespace,
     string AssemblyName,
-    bool Optional = false);
+    string? LibraryConstantName = null,
+    string? TypeSummary = null,
+    string? StructSummary = null,
+    string? FacadeMethodImpl = null);
 
 /// <summary>Declares a non-generated companion file that must exist before emit.</summary>
 /// <param name="RelativePath">Path relative to the repository root.</param>
@@ -81,26 +87,29 @@ public sealed class BindingCodegenOptions
     /// <summary>Manifest source.</summary>
     public required IBindingManifestSource Manifests { get; init; }
 
-    /// <summary>When <see langword="true"/>, optional raygui jobs are included.</summary>
-    public bool IncludeRaygui { get; init; }
+    /// <summary>When <see langword="true"/>, optional emit jobs are included.</summary>
+    public bool IncludeOptional { get; init; }
 
     /// <summary>When <see langword="true"/>, manifest fingerprints are verified before emit.</summary>
     public bool VerifyManifest { get; init; } = true;
 
     /// <summary>Command printed when generated files drift from manifests.</summary>
-    public string RegenerateHint { get; init; } =
-        "dotnet run --project codegen/Novolis.Raylib.Pipeline -- run generate";
+    public required string RegenerateHint { get; init; }
 
     /// <summary>Creates options for a physical repository and manifest set.</summary>
     /// <param name="repoRoot">Repository root.</param>
     /// <param name="manifests">Manifest source.</param>
-    /// <returns>Configured options with raygui enabled.</returns>
-    public static BindingCodegenOptions Physical(string repoRoot, IBindingManifestSource manifests) =>
+    /// <param name="regenerateHint">Command printed when generated output drifts.</param>
+    /// <returns>Configured options.</returns>
+    public static BindingCodegenOptions Physical(
+        string repoRoot,
+        IBindingManifestSource manifests,
+        string regenerateHint) =>
         new()
         {
             Environment = CodegenEnvironment.Physical(repoRoot),
             Manifests = manifests,
-            IncludeRaygui = true,
+            RegenerateHint = regenerateHint,
         };
 }
 
@@ -177,13 +186,17 @@ public sealed class BindingProject
 /// <param name="Emitter">Emitter implementation.</param>
 /// <param name="Target">Output target.</param>
 /// <param name="Optional">When <see langword="true"/>, skipped unless optional jobs are included.</param>
+/// <param name="FormatPolicy">Formatting applied after the raw source is emitted.</param>
+/// <param name="Slice">Optional named slice within a multi-output fragment.</param>
 public sealed record BindingEmitJob(
     string Label,
     FragmentKind FragmentKind,
     string FragmentId,
     IBindingEmitter Emitter,
     EmitTarget Target,
-    bool Optional = false);
+    bool Optional = false,
+    BindingFormatPolicy FormatPolicy = BindingFormatPolicy.RoslynFormatter,
+    string? Slice = null);
 
 /// <summary>Shared helpers for binding project validation and job filtering.</summary>
 public static class BindingCodegenExecutor
@@ -196,8 +209,8 @@ public static class BindingCodegenExecutor
 
     /// <summary>Returns jobs that should run given optional raygui inclusion.</summary>
     /// <param name="project">Binding project.</param>
-    /// <param name="includeRaygui">When <see langword="true"/>, optional jobs are included.</param>
+    /// <param name="includeOptional">When <see langword="true"/>, optional jobs are included.</param>
     /// <returns>Filtered jobs.</returns>
-    public static IEnumerable<BindingEmitJob> FilterJobs(BindingProject project, bool includeRaygui) =>
-        project.Jobs.Where(j => !j.Optional || includeRaygui);
+    public static IEnumerable<BindingEmitJob> FilterJobs(BindingProject project, bool includeOptional) =>
+        project.Jobs.Where(j => !j.Optional || includeOptional);
 }

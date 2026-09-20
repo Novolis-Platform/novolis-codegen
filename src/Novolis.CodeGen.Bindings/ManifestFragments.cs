@@ -11,12 +11,12 @@ public interface IManifestFragment
 }
 
 /// <summary>Interop marshalling policy applied when emitting LibraryImport stubs.</summary>
-/// <param name="SuppressGcTransitionByTemplate">Templates for which GC transition suppression is enabled.</param>
+/// <param name="SuppressGcTransitionByFunction">Function names for which GC transition suppression is enabled.</param>
 /// <param name="NeverSuppressGcTransition">Import names that must never suppress GC transition.</param>
 /// <param name="FacadeMethodImpl">Optional MethodImpl attribute text for façade methods.</param>
 /// <param name="UseDisableRuntimeMarshalling">When <see langword="true"/>, emit DisableRuntimeMarshalling at assembly level.</param>
 public sealed record InteropPolicySpec(
-    IReadOnlyList<string> SuppressGcTransitionByTemplate,
+    IReadOnlyList<string> SuppressGcTransitionByFunction,
     IReadOnlyList<string> NeverSuppressGcTransition,
     string? FacadeMethodImpl,
     bool UseDisableRuntimeMarshalling);
@@ -33,12 +33,12 @@ public sealed record InteropFieldSpec(string Name, string ClrType);
 
 /// <summary>One native import entry in an interop manifest.</summary>
 /// <param name="Name">Native function name.</param>
-/// <param name="Template">Template key (see <see cref="InteropTemplate"/>).</param>
+/// <param name="Signature">Typed C ABI signature.</param>
 /// <param name="Description">Optional XML doc summary for the generated member.</param>
 /// <param name="SuppressGcTransition">Per-import GC transition override.</param>
 public sealed record InteropImportSpec(
     string Name,
-    string Template,
+    NativeSignature Signature,
     string? Description = null,
     bool? SuppressGcTransition = null);
 
@@ -51,6 +51,7 @@ public sealed record InteropImportSpec(
 /// <param name="Policy">Marshalling policy.</param>
 /// <param name="Structs">Struct definitions referenced by imports.</param>
 /// <param name="Imports">Import entries.</param>
+/// <param name="Usings">Additional using directives emitted after interop infrastructure usings.</param>
 public sealed record InteropExportsFragment(
     string Id,
     int SchemaVersion,
@@ -59,7 +60,8 @@ public sealed record InteropExportsFragment(
     string DllName,
     InteropPolicySpec Policy,
     IReadOnlyList<InteropStructSpec> Structs,
-    IReadOnlyList<InteropImportSpec> Imports) : IManifestFragment
+    IReadOnlyList<InteropImportSpec> Imports,
+    IReadOnlyList<string>? Usings = null) : IManifestFragment
 {
     /// <inheritdoc />
     public FragmentKind Kind => FragmentKind.InteropExports;
@@ -67,8 +69,8 @@ public sealed record InteropExportsFragment(
 
 /// <summary>One export entry in a dynamic shim manifest.</summary>
 /// <param name="Export">Native export symbol name.</param>
-/// <param name="Template">Template key for the delegate signature.</param>
-public sealed record ShimExportSpec(string Export, string Template);
+/// <param name="Signature">Typed C ABI function signature.</param>
+public sealed record ShimExportSpec(string Export, NativeSignature Signature);
 
 /// <summary>Manifest fragment describing dynamic shim exports loaded from a native module.</summary>
 /// <param name="Id">Fragment identifier.</param>
@@ -77,13 +79,15 @@ public sealed record ShimExportSpec(string Export, string Template);
 /// <param name="Description">Optional fragment description.</param>
 /// <param name="ModuleFileName">Native module file name.</param>
 /// <param name="Exports">Export entries.</param>
+/// <param name="EmbeddedTypes">Blittable types emitted inside the dynamic-export class.</param>
 public sealed record ShimExportsFragment(
     string Id,
     int SchemaVersion,
     string? Header,
     string? Description,
     string ModuleFileName,
-    IReadOnlyList<ShimExportSpec> Exports) : IManifestFragment
+    IReadOnlyList<ShimExportSpec> Exports,
+    IReadOnlyList<EmbeddedTypeSpec>? EmbeddedTypes = null) : IManifestFragment
 {
     /// <inheritdoc />
     public FragmentKind Kind => FragmentKind.ShimExports;

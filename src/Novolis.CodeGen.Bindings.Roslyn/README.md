@@ -8,7 +8,7 @@
 
 # Novolis.CodeGen.Bindings.Roslyn
 
-Roslyn hook host, emit writer, and structural compilation-unit comparison for binding codegen.
+Roslyn hook host, default binding-job runner, emit writer, and structural compilation-unit comparison for C-ABI binding codegen.
 
 ## Install
 
@@ -20,22 +20,32 @@ dotnet add package Novolis.CodeGen.Bindings.Roslyn
 
 ## Quick start
 
-Register hooks and write formatted output through the virtual filesystem on `BindingEmitContext`:
+Run a declared `BindingProject` through the standard string-emission, parse, hook, format, and write path:
 
 ```csharp
+using Novolis.CodeGen.Bindings;
 using Novolis.CodeGen.Bindings.Roslyn;
 
-var hooks = HookDiscovery.Discover<MyPhase, MyContext>(typeof(MyEndDrawingHook).Assembly);
-
-RoslynEmitWriter<MyPhase, MyContext>.WriteFile(
-    rawSource,
-    context,
-    MyPhase.Facade,
-    hooks,
-    FormatPolicy.RoslynFormatter);
+var exit = new BindingCodegenHost<MyPhase, MyContext>().Generate(
+    new BindingCodegenRun<MyPhase, MyContext>
+    {
+        Project = project,
+        Options = options,
+        SelectPhase = job => MyPhase.Emit,
+        CreateContext = (job, fragment, outputPath, fingerprint) =>
+            new MyContext
+            {
+                Environment = options.Environment,
+                OutputPath = outputPath,
+                Fragment = fragment,
+                ManifestSha256 = fingerprint,
+                RegenerateHint = options.RegenerateHint,
+            },
+        Hooks = HookDiscovery.Discover<MyPhase, MyContext>(typeof(MyEndDrawingHook).Assembly),
+    });
 ```
 
-Use `CompilationUnitComparer.AreStructurallyEquivalent` for T1 parity gates between committed and emitted source.
+Jobs own their source-format policy: `RoslynFormatter` for interop, shims, and debug output; `NormalizeWhitespace` for façade forwards. Use `CompilationUnitComparer.AreStructurallyEquivalent` for T1 parity gates between committed and emitted source.
 
 ## Related packages
 

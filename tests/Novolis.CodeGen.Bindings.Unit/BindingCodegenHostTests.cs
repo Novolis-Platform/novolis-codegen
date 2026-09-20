@@ -7,16 +7,16 @@ public sealed class BindingCodegenHostTests
     static readonly InteropPolicySpec EmptyPolicy = new([], [], null, false);
 
     [Test]
-    public async Task BindingCodegenOptions_Physical_sets_defaults()
+    public async Task BindingCodegenOptions_Physical_sets_explicit_regeneration_hint()
     {
         var repoRoot = TestPaths.Root("binding-options");
         var fragment = new InteropExportsFragment("raylib", 1, null, null, "raylib", EmptyPolicy, [], []);
         var source = BindingManifestSource.Create(fragment);
-        var options = BindingCodegenOptions.Physical(repoRoot, source);
+        var options = BindingCodegenOptions.Physical(repoRoot, source, "dotnet run --project codegen/My.CodeGen -- generate");
 
-        await Assert.That(options.IncludeRaygui).IsTrue();
+        await Assert.That(options.IncludeOptional).IsFalse();
         await Assert.That(options.VerifyManifest).IsTrue();
-        await Assert.That(options.RegenerateHint).Contains("Novolis.Raylib.Pipeline");
+        await Assert.That(options.RegenerateHint).Contains("My.CodeGen");
         await Assert.That(options.Environment.RepoRoot).IsEqualTo(repoRoot);
         await Assert.That(options.Manifests).IsSameReferenceAs(source);
     }
