@@ -36,7 +36,7 @@ var imports = new InteropExportsFragment(
     Header: null,
     Description: "Example C ABI.",
     DllName: "example",
-    Policy: new InteropPolicySpec([], [], null, UseDisableRuntimeMarshalling: true),
+    Policy: new InteropPolicySpec([], [], "AggressiveInlining", UseDisableRuntimeMarshalling: true),
     Structs: [],
     Imports:
     [
@@ -45,11 +45,12 @@ var imports = new InteropExportsFragment(
             NativeSignature.Create(
                 NativeType.NativeInt,
                 new NativeParameter("path", NativeType.Utf8String))),
-    ],
-    Usings: ["Example.Interop"]);
+    ]);
 ```
 
-Register `LibraryImportEmitter`, `DynamicExportsEmitter`, or `FacadeForwardEmitter` as `BindingEmitJob`s, then run them through `BindingCodegenHost<TPhase, TContext>` from `Novolis.CodeGen.Bindings.Roslyn`. Keep the generated source in a T1 structural-equivalence test when replacing an existing emitter.
+Register jobs with the factories (`BindingEmitJob.LibraryImport`, `DynamicExports`, `FacadeForward`), then call `BindingCodegen.Generate` from `Novolis.CodeGen.Bindings.Roslyn`. Use the generic `BindingCodegenHost<TPhase, TContext>` only when you need Roslyn hooks.
+
+Complete tiny consumer: `d:\novolis\novolis-lab\labs\codegen\TinyExprBindings\`. Keep generated source in a T1 structural-equivalence test when replacing an existing emitter.
 
 ## Next
 

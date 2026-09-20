@@ -22,10 +22,14 @@ dotnet add package Novolis.CodeGen.Bindings
 
 ## Quick start
 
-Define C# manifest fragments, expose them through `IBindingManifestSource`, and run a consumer host:
+1. Author typed signatures (`NativeSignature` / `NativeParameter`).
+2. Put them in an `InteropExportsFragment` (and optional `FacadeTypesFragment`).
+3. Register jobs with `BindingEmitJob.LibraryImport` / `FacadeForward` / `DynamicExports`.
+4. Call `BindingCodegen.Generate` from `Novolis.CodeGen.Bindings.Roslyn`.
 
 ```csharp
 using Novolis.CodeGen.Bindings;
+using Novolis.CodeGen.Bindings.Roslyn;
 
 var manifests = BindingManifestSource.Create(
     new InteropExportsFragment(
@@ -33,8 +37,8 @@ var manifests = BindingManifestSource.Create(
         SchemaVersion: 1,
         Header: null,
         Description: null,
-        DllName: "mylib.dll",
-        Policy: new InteropPolicySpec([], [], null, false),
+        DllName: "mylib",
+        Policy: new InteropPolicySpec([], [], "AggressiveInlining", UseDisableRuntimeMarshalling: true),
         Structs: [],
         Imports:
         [
@@ -43,30 +47,41 @@ var manifests = BindingManifestSource.Create(
                 NativeSignature.Create(
                     NativeType.Void,
                     new NativeParameter("flags", NativeType.UInt32))),
-        ],
-        Usings: ["Example.Interop"]));
+        ]));
 
 var options = BindingCodegenOptions.Physical(
     @"d:\repo",
     manifests,
     "dotnet run --project codegen/Example.CodeGen -- generate");
+
+var project = BindingProject.Create("MyLib")
+    .AddJob(BindingEmitJob.LibraryImport(
+        "interop",
+        "mylib",
+        "MyLibNative",
+        "src/MyLib.Bindings/Interop/MyLibNative.g.cs",
+        "MyLib.Interop",
+        "MyLib.Bindings",
+        libraryConstantName: "MyLibDll"));
+
+BindingCodegen.Generate(project, options);
 ```
 
-Use `LibraryImportEmitter` for `InteropExportsFragment`, `DynamicExportsEmitter` for `ShimExportsFragment`, and `FacadeForwardEmitter` for one `FacadeTypesFragment` slice. `NativeSignature` carries parameter names as well as types, so consumer manifests control the emitted C# ABI exactly.
+`NativeSignature` carries parameter names as well as types, so consumer manifests control the emitted C# ABI exactly. Use the generic `BindingCodegenHost<TPhase, TContext>` only when you need Roslyn hooks (Raylib EndDrawing rewrite, docs injection, and similar).
 
 ## Related packages
 
 | Package | When to use |
 |---------|-------------|
-| `Novolis.CodeGen.Bindings.Roslyn` | Roslyn hooks, formatting, and structural parity comparison |
+| `Novolis.CodeGen.Bindings.Roslyn` | Default `BindingCodegen.Generate`, hooks, formatting, and structural parity comparison |
 | `Novolis.CodeGen.Pipeline` | Step runner with fingerprinted skip/cache for maintainer pipelines |
 
 ## More documentation
 
 - [Getting started](../../docs/getting-started.md)
 - [Binding codegen spec](../../docs/specs/binding-codegen-library/initial-idea-v2.md)
+- TinyExpr lab: `d:\novolis\novolis-lab\labs\codegen\TinyExprBindings\`
 
 ## Support
 
 Pre-release platform library. Public API is fully documented with strict XML (`CS1591` enforced).
-

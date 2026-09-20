@@ -18,14 +18,48 @@ dotnet add package Novolis.CodeGen.Bindings.Roslyn
 
 **Prerequisites:** [.NET 10 SDK](https://dotnet.microsoft.com/download) (`net10.0`).
 
-## Quick start
+## Quick start (no hooks)
 
-Run a declared `BindingProject` through the standard string-emission, parse, hook, format, and write path:
+Most C libraries only need typed manifests and jobs — no phase enum and no `CreateContext` plumbing:
 
 ```csharp
 using Novolis.CodeGen.Bindings;
 using Novolis.CodeGen.Bindings.Roslyn;
 
+var options = BindingCodegenOptions.Physical(
+    repoRoot,
+    manifests,
+    "dotnet run --project My.CodeGen -- generate");
+
+var project = BindingProject.Create("MyLib")
+    .AddJob(BindingEmitJob.LibraryImport(
+        "interop",
+        fragmentId: "mylib",
+        className: "MyLibNative",
+        relativePath: "src/MyLib.Bindings/Interop/MyLibNative.g.cs",
+        namespaceName: "MyLib.Interop",
+        assemblyName: "MyLib.Bindings",
+        libraryConstantName: "MyLibDll"))
+    .AddJob(BindingEmitJob.FacadeForward(
+        "facade",
+        fragmentId: "facades",
+        typeName: "AudioDevice",
+        relativePath: "src/MyLib.Runtime/Audio/AudioDevice.g.cs",
+        namespaceName: "MyLib",
+        assemblyName: "MyLib.Runtime",
+        facadeMethodImpl: "AggressiveInlining"));
+
+var exit = BindingCodegen.Generate(project, options);
+```
+
+See the TinyExpr lab for a complete tiny consumer:
+`d:\novolis\novolis-lab\labs\codegen\TinyExprBindings\`.
+
+## Custom phases and hooks
+
+Raylib-style consumers that rewrite syntax after emit still use the generic host:
+
+```csharp
 var exit = new BindingCodegenHost<MyPhase, MyContext>().Generate(
     new BindingCodegenRun<MyPhase, MyContext>
     {
@@ -45,13 +79,13 @@ var exit = new BindingCodegenHost<MyPhase, MyContext>().Generate(
     });
 ```
 
-Jobs own their source-format policy: `RoslynFormatter` for interop, shims, and debug output; `NormalizeWhitespace` for façade forwards. Use `CompilationUnitComparer.AreStructurallyEquivalent` for T1 parity gates between committed and emitted source.
+Jobs own their source-format policy: `RoslynFormatter` for interop, shims, and debug output; `NormalizeWhitespace` for façade forwards (applied automatically by `BindingEmitJob.FacadeForward`). Use `CompilationUnitComparer.AreStructurallyEquivalent` for T1 parity gates between committed and emitted source.
 
 ## Related packages
 
 | Package | When to use |
 |---------|-------------|
-| `Novolis.CodeGen.Bindings` | Manifest fragments, `BindingEmitContext`, and emit orchestration |
+| `Novolis.CodeGen.Bindings` | Manifest fragments, `BindingEmitJob` factories, and emit orchestration |
 
 ## More documentation
 
@@ -61,4 +95,3 @@ Jobs own their source-format policy: `RoslynFormatter` for interop, shims, and d
 ## Support
 
 Pre-release platform library. Depends on `Microsoft.CodeAnalysis.CSharp`.
-

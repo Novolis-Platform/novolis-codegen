@@ -131,54 +131,32 @@ public sealed class BindingEmittersTests
         var source = BindingManifestSource.Create(fragment);
         var project = BindingProject.Create("example")
             .AddJob(
-                new BindingEmitJob(
+                BindingEmitJob.LibraryImport(
                     "core",
-                    FragmentKind.InteropExports,
                     "native",
-                    new LibraryImportEmitter(),
-                    new EmitTarget(
-                        "NativeExports",
-                        EmitStrategy.LibraryImport,
-                        "generated/NativeExports.g.cs",
-                        "Example.Interop",
-                        "Example.Bindings",
-                        LibraryConstantName: "NativeDll")))
+                    "NativeExports",
+                    "generated/NativeExports.g.cs",
+                    "Example.Interop",
+                    "Example.Bindings",
+                    libraryConstantName: "NativeDll"))
             .AddJob(
-                new BindingEmitJob(
+                BindingEmitJob.LibraryImport(
                     "optional",
-                    FragmentKind.InteropExports,
                     "native",
-                    new LibraryImportEmitter(),
-                    new EmitTarget(
-                        "OptionalExports",
-                        EmitStrategy.LibraryImport,
-                        "generated/OptionalExports.g.cs",
-                        "Example.Interop",
-                        "Example.Bindings",
-                        LibraryConstantName: "NativeDll"),
-                    Optional: true));
+                    "OptionalExports",
+                    "generated/OptionalExports.g.cs",
+                    "Example.Interop",
+                    "Example.Bindings",
+                    libraryConstantName: "NativeDll",
+                    optional: true));
         var options = new BindingCodegenOptions
         {
             Environment = new CodegenEnvironment { FileSystem = fileSystem, RepoRoot = root },
             Manifests = source,
             RegenerateHint = "dotnet run --project example",
         };
-        var run = new BindingCodegenRun<TestPhase, TestContext>
-        {
-            Project = project,
-            Options = options,
-            SelectPhase = _ => TestPhase.Emit,
-            CreateContext = (_, manifest, outputPath, fingerprint) => new TestContext
-            {
-                Environment = options.Environment,
-                OutputPath = outputPath,
-                Fragment = manifest,
-                ManifestSha256 = fingerprint,
-                RegenerateHint = options.RegenerateHint,
-            },
-        };
 
-        var exit = new BindingCodegenHost<TestPhase, TestContext>().Generate(run);
+        var exit = BindingCodegen.Generate(project, options);
 
         await Assert.That(exit).IsEqualTo(0);
         await Assert.That(fileSystem.File.Exists(TestPaths.Combine(root, "generated", "NativeExports.g.cs"))).IsTrue();
@@ -194,11 +172,4 @@ public sealed class BindingEmittersTests
             ManifestSha256 = "hash",
             RegenerateHint = "dotnet run --project example",
         };
-
-    private enum TestPhase
-    {
-        Emit,
-    }
-
-    private sealed class TestContext : BindingEmitContext;
 }
