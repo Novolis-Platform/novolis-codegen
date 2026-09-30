@@ -2,68 +2,6 @@ using Novolis.CodeGen.Bindings;
 
 namespace Novolis.CodeGen.Bindings.Roslyn;
 
-/// <summary>Zero-ceremony entry point for consumers that do not need custom phases or hooks.</summary>
-public static class BindingCodegen
-{
-    /// <summary>
-    /// Emits all selected jobs using the default <see cref="BindingEmitContext"/> and no Roslyn hooks.
-    /// </summary>
-    /// <param name="project">Declared companions and emit jobs.</param>
-    /// <param name="options">Filesystem, manifests, and regeneration hint.</param>
-    /// <param name="log">Optional generation log.</param>
-    /// <returns>Zero after all selected jobs are written.</returns>
-    public static int Generate(BindingProject project, BindingCodegenOptions options, TextWriter? log = null)
-    {
-        ArgumentNullException.ThrowIfNull(project);
-        ArgumentNullException.ThrowIfNull(options);
-
-        return new BindingCodegenHost<DefaultPhase, BindingEmitContext>().Generate(
-            new BindingCodegenRun<DefaultPhase, BindingEmitContext>
-            {
-                Project = project,
-                Options = options,
-                SelectPhase = static _ => DefaultPhase.Emit,
-                CreateContext = (_, fragment, outputPath, fingerprint) => new BindingEmitContext
-                {
-                    Environment = options.Environment,
-                    OutputPath = outputPath,
-                    Fragment = fragment,
-                    ManifestSha256 = fingerprint,
-                    RegenerateHint = options.RegenerateHint,
-                },
-            },
-            log);
-    }
-
-    private enum DefaultPhase
-    {
-        Emit,
-    }
-}
-
-/// <summary>Supplies consumer-specific context and hooks for one binding generation run.</summary>
-/// <typeparam name="TPhase">The consumer's emit phase enum.</typeparam>
-/// <typeparam name="TContext">The consumer's specialized emit context.</typeparam>
-public sealed class BindingCodegenRun<TPhase, TContext>
-    where TPhase : struct, Enum
-    where TContext : BindingEmitContext
-{
-    /// <summary>The declared binding project and its emit jobs.</summary>
-    public required BindingProject Project { get; init; }
-
-    /// <summary>Filesystem, manifests, regeneration hint, and optional-job selection.</summary>
-    public required BindingCodegenOptions Options { get; init; }
-
-    /// <summary>Creates the consumer context for one emitted output.</summary>
-    public required Func<BindingEmitJob, IManifestFragment, string, string, TContext> CreateContext { get; init; }
-
-    /// <summary>Maps one job to the phase passed to Roslyn hooks.</summary>
-    public required Func<BindingEmitJob, TPhase> SelectPhase { get; init; }
-
-    /// <summary>Consumer hooks applied after source emission.</summary>
-    public IReadOnlyList<ICodegenHook<TPhase, TContext>> Hooks { get; init; } = [];
-}
-
 /// <summary>Runs declared binding jobs through the standard Roslyn write pipeline.</summary>
 /// <typeparam name="TPhase">The consumer's emit phase enum.</typeparam>
 /// <typeparam name="TContext">The consumer's specialized emit context.</typeparam>
